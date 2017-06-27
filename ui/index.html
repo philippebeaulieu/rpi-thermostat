@@ -34,12 +34,22 @@
 		</div>
 	</div>
 
+	<div id="line-chart" ng-controller="LineCtrl">
+		<div class="panel panel-default">
+			<div class="panel-heading">Line Chart</div>
+			<div class="panel-body">
+				<canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels"
+					chart-click="onClick" chart-hover="onHover" chart-series="series" chart-options="options"
+					chart-dataset-override="datasetOverride"></canvas>
+			</div>
+		</div>
 	</div>
 </body>
 
 <script src="/js/angular.min.js"></script>
 <script src="/js/angular-resource.min.js"></script>
-<script type="text/javascript">
+<script src="/js/Chart.bundle.min.js"></script>
+<script src="/js/angular-chart.min.js"></script>
 
 <script type="text/javascript">
 	var app = angular.module("thermostat", ["ngResource", "chart.js"]);
@@ -63,6 +73,39 @@
 		}
 	}]);
 	
+	app.controller("LineCtrl", ["$scope", function ($scope) {
+
+	  $scope.labels = ["January", "February", "March", "April", "May", "June", "July"];
+	  $scope.series = ['Series A', 'Series B'];
+	  $scope.data = [
+	    [65, 59, 80, 81, 56, 55, 40],
+	    [28, 48, 40, 19, 86, 27, 90]
+	  ];
+	  $scope.onClick = function (points, evt) {
+	    console.log(points, evt);
+	  };
+	  $scope.datasetOverride = [{ yAxisID: 'y-axis-1' }, { yAxisID: 'y-axis-2' }];
+	  $scope.options = {
+	    scales: {
+	      yAxes: [
+	        {
+	          id: 'y-axis-1',
+	          type: 'linear',
+	          display: true,
+	          position: 'left'
+	        },
+	        {
+	          id: 'y-axis-2',
+	          type: 'linear',
+	          display: true,
+	          position: 'right'
+	        }
+	      ]
+	    }
+	  };
+	}]);
+
+
 </script>
 
 </html>
