@@ -1,59 +1,49 @@
 package main
 
 import (
-	"encoding/binary"
+	"bufio"
+	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"os/signal"
-	"strings"
+	"strconv"
 	"time"
 
-	"github.com/paypal/gatt"
-	"github.com/paypal/gatt/linux/cmd"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/stianeikeland/go-rpio"
 )
 
 var (
 	current = 0
-	desired = 75
-	fanmode = "auto"
+	desired = 21
 	sysmode = "off"
 
-	fan  = rpio.Pin(17)
-	cool = rpio.Pin(21)
-	heat = rpio.Pin(22)
+	power = 0 //max = 9
 
-	exiting      = false
-	disconnected = make(chan bool)
-	peripheral   gatt.Peripheral
+	pwm1Total = 0
+	pwm2Total = -3
+	pwm3Total = -6
 
-	DefaultClientOptions = []gatt.Option{
-		gatt.LnxMaxConnections(1),
-		gatt.LnxDeviceID(-1, true),
-	}
+	pwm1out = 0
+	pwm2out = 0
+	pwm3out = 0
 
-	DefaultServerOptions = []gatt.Option{
-		gatt.LnxMaxConnections(1),
-		gatt.LnxDeviceID(-1, true),
-		gatt.LnxSetAdvertisingParameters(&cmd.LESetAdvertisingParameters{
-			AdvertisingIntervalMin: 0x00f4,
-			AdvertisingIntervalMax: 0x00f4,
-			AdvertisingChannelMap:  0x7,
-		}),
-	}
+	tempSensor = "/sys/bus/w1/devices/28-041685fc45ff/w1_slave"
+	logFolder  = "/var/log/rpi-thermostat/"
+	logFile    = logFolder + "temp.log"
+
+	heat1 = rpio.Pin(17)
+	heat2 = rpio.Pin(21)
+	heat3 = rpio.Pin(22)
 )
 
-// API
-
-type Thermostat struct {
+type thermostat struct {
 	Current int    `json:"current"`
 	Desired int    `json:"desired"`
 	Sysmode string `json:"sysmode"`
-	Fanmode string `json:"fanmode"`
+	Power   int    `json:"power"`
 }
 
 func updateHandler(r *http.Request) int {
@@ -62,21 +52,16 @@ func updateHandler(r *http.Request) int {
 		return http.StatusBadRequest
 	}
 
-	var t Thermostat
+	var t thermostat
 	err = json.Unmarshal(body, &t)
 	if err != nil {
 		return http.StatusBadRequest
 	}
 
-	if t.Desired >= 60 && t.Desired <= 85 {
+	if t.Desired <= 26 {
 		desired = t.Desired
 	}
-	if t.Current >= 50 && t.Current <= 90 {
-		current = t.Current
-	}
 	sysmode = t.Sysmode
-	fanmode = t.Fanmode
-	updateState()
 	return http.StatusOK
 }
 
@@ -91,8 +76,8 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		code = http.StatusNotImplemented
 	}
-	log.Printf("current: %d, desired: %d, sysmode: %s, fanmode: %s\n", current, desired, sysmode, fanmode)
-	response := Thermostat{current, desired, sysmode, fanmode}
+	//log.Printf("current: %v, desired: %v, sysmode: %v, power: %v\n", current, desired, sysmode, power)
+	response := thermostat{current, desired, sysmode, power}
 	json, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Error marshalling JSON", http.StatusInternalServerError)
@@ -104,294 +89,181 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", code)
 	}
 	w.Write(json)
-	log.Printf("%s %s %s %d", r.RemoteAddr, r.Method, r.URL, 200)
 }
 
 // GPIO
 
-func Start(p rpio.Pin) {
-	p.Low()
-}
-
-func Stop(p rpio.Pin) {
+func start(p rpio.Pin) {
 	p.High()
 }
 
-// Sensor
-
-func onStateChanged(d gatt.Device, s gatt.State) {
-	log.Println("State:", s)
-	switch s {
-	case gatt.StatePoweredOn:
-		log.Println("Scanning...")
-		d.Scan([]gatt.UUID{}, false)
-		return
-	default:
-		d.StopScanning()
-	}
+func stop(p rpio.Pin) {
+	p.Low()
 }
 
-func onPeriphDiscovered(p gatt.Peripheral, a *gatt.Advertisement, rssi int) {
-	if !strings.Contains(a.LocalName, "SensorTag") {
-		return
-	}
-
-	// Stop scanning once we've got the peripheral we're looking for.
-	p.Device().StopScanning()
-
-	log.Printf("\nPeripheral ID:%s, NAME:(%s)\n", p.ID(), p.Name())
-	log.Println("  Local Name        =", a.LocalName)
-	log.Println("  TX Power Level    =", a.TxPowerLevel)
-	log.Println("  Manufacturer Data =", a.ManufacturerData)
-	log.Println("  Service Data      =", a.ServiceData)
-	log.Println("")
-
-	p.Device().Connect(p)
-}
-
-func convertTemp(b []byte) int {
-	rawdata := binary.LittleEndian.Uint16(b)
-	return int((float32(rawdata)/4.0)*float32(0.03125)*(9.0/5.0) + 32)
-}
-
-func handleTempNotification(c *gatt.Characteristic, b []byte, err error) {
-	t := convertTemp(b[2:4])
-	if t > 50 && t < 90 { // sanity range
-		current = t
-		updateState()
-	}
-}
-
-func onPeriphConnected(p gatt.Peripheral, err error) {
-	log.Println("Connected")
-	peripheral = p
-
-	err = p.SetMTU(500)
-	if err != nil {
-		log.Printf("Failed to set MTU, err: %s\n", err)
-	}
-
-	uuid, err := gatt.ParseUUID("f000aa00-0451-4000-b000-000000000000")
-	if err != nil {
-		log.Printf("Failed to create UUID, err: %s\n", err)
-		return
-	}
-
-	ss, err := p.DiscoverServices(nil)
-	if err != nil {
-		log.Printf("Failed to discover IR sensor service, err: %s\n", err)
-		return
-	}
-
-	var s *gatt.Service
-	for _, s = range ss {
-		if s.UUID().Equal(uuid) {
-			break
-		}
-	}
-
-	cs, err := p.DiscoverCharacteristics(nil, s)
-	if err != nil {
-		log.Printf("Failed to discover characteristics, err: %s\n", err)
-		return
-	}
-
-	for _, c := range cs {
-		_, err = p.DiscoverDescriptors(nil, c)
-		if err != nil {
-			log.Printf("Failed to discover descriptors, err: %s\n", err)
-			return
-		}
-	}
-
-	data := cs[0]
-	config := cs[1]
-	samplerate := cs[2]
-
-	// Turn on notifications
-	err = p.SetNotifyValue(data, handleTempNotification)
-	if err != nil {
-		log.Printf("Failed to write config characteristics, err: %s\n", err)
-		return
-	}
-
-	// Set sample rate
-	err = p.WriteCharacteristic(samplerate, []byte{0xFF}, false)
-	if err != nil {
-		log.Printf("Failed to write samplerate characteristics, err: %s\n", err)
-		return
-	}
-
-	// Start sensors
-	err = p.WriteCharacteristic(config, []byte{0x01}, false)
-	if err != nil {
-		log.Printf("Failed to write config characteristics, err: %s\n", err)
-		return
-	}
-}
-
-var done = make(chan bool)
-
-func onPeriphDisconnected(p gatt.Peripheral, err error) {
-	if exiting {
-		disconnected <- true
-	} else {
-		done <- true
-		peripheral = nil
-	}
-}
-
-func updateState() {
-	if current == 0 {
-		Stop(fan)
-		Stop(cool)
-		Stop(heat)
-		return
-	}
-	switch sysmode {
-	case "off":
-		Stop(heat)
-		Stop(cool)
-		if fanmode == "auto" {
-			Stop(fan)
-		}
-	case "cool":
-		if current > desired {
-			Start(fan)
-			Start(cool)
-		} else if current < desired {
-			if fanmode == "auto" {
-				Stop(fan)
-			}
-			Stop(cool)
-		}
-		Stop(heat)
-	case "heat":
-		if current < desired {
-			Start(fan)
-			Start(heat)
-		} else if current > desired {
-			if fanmode == "auto" {
-				Stop(fan)
-			}
-			Stop(heat)
-		}
-		Stop(cool)
-	}
-
-	if fanmode == "on" {
-		Start(fan)
-	}
-	go func() {
-		led := rpio.Pin(16)
-		led.Output()
-		led.Low()
-		<-time.After(100 * time.Millisecond)
-		led.High()
-	}()
-}
-
-func readSettingsFile() error {
-	settingsFile, err := os.Open("settings.json")
-	if err != nil {
-		return fmt.Errorf("settings.json file not found, using defaults")
-	}
-
-	var settings Thermostat
-	if err = json.NewDecoder(settingsFile).Decode(&settings); err != nil {
-		return err
-	}
-
-	desired = settings.Desired
-	fanmode = settings.Fanmode
-	sysmode = settings.Sysmode
-	settingsFile.Close()
-	return nil
-}
-
-func writeSettingsFile() error {
-	settingsFile, err := os.Create("settings.json")
-	if err != nil {
-		return err
-	}
-	defer settingsFile.Close()
-
-	var settings Thermostat
-	settings.Desired = desired
-	settings.Fanmode = fanmode
-	settings.Sysmode = sysmode
-	output, err := json.Marshal(settings)
-	if err != nil {
-		return err
-	}
-	_, err = settingsFile.Write(output)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func main() {
-	err := readSettingsFile()
-	if err != nil {
-		log.Printf("WARNING: %s", err)
-	}
-	defer writeSettingsFile()
-
-	// Sensor
-	d, err := gatt.NewDevice(DefaultClientOptions...)
-	if err != nil {
-		log.Fatalf("Failed to open device, err: %s\n", err)
-		return
-	}
-
-	d.Handle(
-		gatt.PeripheralDiscovered(onPeriphDiscovered),
-		gatt.PeripheralConnected(onPeriphConnected),
-		gatt.PeripheralDisconnected(onPeriphDisconnected),
+func readln(r *bufio.Reader) (string, error) {
+	var (
+		isPrefix = true
+		err      error
+		line, ln []byte
 	)
+	for isPrefix && err == nil {
+		line, isPrefix, err = r.ReadLine()
+		ln = append(ln, line...)
+	}
+	return string(ln), err
+}
 
-	d.Init(onStateChanged)
+func readTemp() int {
+	f, err := os.Open(tempSensor)
+	if err != nil {
+		log.Println("error opening file= ", err)
+		os.Exit(1)
+	}
 
-	// API
-	http.HandleFunc("/api", apiHandler)
-	http.Handle("/", http.FileServer(http.Dir("./ui")))
-	go http.ListenAndServe(":80", nil)
+	r := bufio.NewReader(f)
+	s, e := readln(r)
+	if e != nil {
+		log.Println("error opening file= ", err)
+		os.Exit(1)
+	}
+	s, e = readln(r)
+	if e != nil {
+		log.Println("error opening file= ", err)
+		os.Exit(1)
+	}
 
-	// GPIO
-	err = rpio.Open()
+	i, err := strconv.Atoi(s[len(s)-5:])
+
+	temp := i / 100
+
+	return temp
+}
+
+func updateOutput(value int, output rpio.Pin) {
+	if value == 0 {
+		stop(output)
+	} else {
+		start(output)
+	}
+}
+
+func pwm(total *int, out *int, output rpio.Pin) {
+
+	*total = *total + 1
+
+	if *total > 8 {
+		*total = 0
+	}
+
+	if *total >= 0 && *total < power {
+		*out = 1
+	} else {
+		*out = 0
+	}
+
+	updateOutput(*out, output)
+}
+
+func limitToRange(value, min, max int) int {
+	if value < min {
+		return min
+	}
+
+	if value > max {
+		return max
+	}
+
+	return value
+}
+
+func setupLog() {
+	if _, err := os.Stat(logFolder); os.IsNotExist(err) {
+		os.Mkdir(logFolder, 0775)
+	}
+
+	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//defer to close when you're done with it, not because you think it's idiomatic!
+	defer f.Close()
+
+	//set output of logs to f
+	log.SetOutput(f)
+}
+
+func setupGpio() {
+	err := rpio.Open()
 	if err != nil {
 		log.Printf("Failed to open controller, err: %s\n", err)
 		return
 	}
-	defer func() {
-		for _, p := range []rpio.Pin{fan, cool, heat} {
-			Stop(p)
-		}
-		rpio.Close()
-	}()
 
-	for _, p := range []rpio.Pin{fan, cool, heat} {
+	for _, p := range []rpio.Pin{heat1, heat2, heat3} {
 		p.Output()
-		Stop(p)
+		stop(p)
 	}
+}
 
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, os.Interrupt)
-		<-c
-		done <- true
-	}()
-	<-done
+func setupAPIServer() {
+	http.HandleFunc("/api", apiHandler)
+	http.Handle("/", http.FileServer(http.Dir("/usr/local/rpi-thermostat/src/github.com/philippebeaulieu/rpi-thermostat/ui")))
+	go http.ListenAndServe(":80", nil)
+}
 
-	exiting = true
-	Stop(fan)
-	Stop(cool)
-	Stop(heat)
-	if peripheral != nil {
-		d.CancelConnection(peripheral)
-		<-disconnected
-		return
+func updatePower() {
+	current = readTemp()
+
+	if sysmode == "off" {
+		power = 0
+	} else {
+		powerSetPoint := limitToRange((desired*10)-current, 0, 9)
+		if powerSetPoint > power {
+			power = power + 1
+		} else if powerSetPoint < power {
+			power = power - 1
+		}
 	}
-	os.Exit(1)
+}
+
+func saveData() {
+	db, err := sql.Open("mysql", "thermostat:GDeWFE8Hg3aKh44@tcp(192.168.2.41:3306)/rpi-thermostat?charset=utf8")
+	checkErr(err)
+	stmt, err := db.Prepare("INSERT temp_data SET time=NOW(),current=?,desired=?,power=?,sysmode=?")
+	checkErr(err)
+	_, err = stmt.Exec(current, desired, power, sysmode)
+	checkErr(err)
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func saveDataLoop() {
+	for {
+		time.Sleep(1 * time.Minute)
+		go saveData()
+	}
+}
+
+func main() {
+
+	setupAPIServer()
+	setupLog()
+	setupGpio()
+	go saveDataLoop()
+
+	for range time.Tick(10 * time.Second) {
+		pwm(&pwm1Total, &pwm1out, heat1)
+		pwm(&pwm2Total, &pwm2out, heat2)
+		pwm(&pwm3Total, &pwm3out, heat3)
+
+		updatePower()
+
+		log.Printf("%v	%v	%v	%v\n", current, desired, power, sysmode)
+	}
 }
