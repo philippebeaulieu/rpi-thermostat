@@ -3,8 +3,8 @@ Description=Raspberry Pi Thermostat
 After=network.target
 
 [Service]
-ExecStart=/root/rpi-thermostat
-WorkingDirectory=/root
+ExecStart=/usr/local/bin/rpi-thermostat
+WorkingDirectory=/usr/local/rpi-thermostat/
 KillSignal=SIGINT
 Restart=on-failure
 
