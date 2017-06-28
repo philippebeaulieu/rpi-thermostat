@@ -7,6 +7,7 @@ import (
 
 	"./api"
 	"./controller/rpi"
+	"./database"
 	"./sensor/ds18b20"
 	"./thermostat"
 )
@@ -26,13 +27,16 @@ func main() {
 
 	thermostat, err := thermostat.NewThermostat(sensor, controller, 21)
 	if err != nil {
-		fmt.Printf("failed to create controller: %v\n", err)
+		fmt.Printf("failed to create thermostat: %v\n", err)
 		return
 	}
 	go thermostat.Run()
 
 	apiserver := apiserver.NewAPIServer(thermostat)
 	go apiserver.Run()
+
+	database, err := database.NewDatabase(thermostat)
+	go database.Run()
 
 	done := make(chan struct{})
 	go func() {
@@ -43,5 +47,7 @@ func main() {
 	}()
 	<-done
 	fmt.Printf("shutting down")
-	controller.Off()
+	controller.Off(1)
+	controller.Off(2)
+	controller.Off(3)
 }

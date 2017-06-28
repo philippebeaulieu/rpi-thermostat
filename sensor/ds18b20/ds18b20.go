@@ -8,20 +8,19 @@ import (
 	"../../sensor"
 )
 
-var tempSensor = "/sys/bus/w1/devices/28-041685fc45ff/w1_slave"
-
-type ds18b20s struct {
-	sensor.Sensor
+type ds18b20 struct {
+	deviceid string
 }
 
-func NewDs18b20(deviceid string) sensor.Sensor {
-	s := &ds18b20s{}
-	return s
+func NewDs18b20(deviceid string) (sensor.Sensor, error) {
+	return &ds18b20{
+		deviceid: deviceid,
+	}, nil
 }
 
-func GetTemperature() (int, error) {
+func (d *ds18b20) GetTemperature() (int, error) {
 
-	f, err := os.Open(tempSensor)
+	f, err := os.Open("/sys/bus/w1/devices/" + d.deviceid + "/w1_slave")
 	if err != nil {
 		return -1, err
 	}

@@ -7,38 +7,40 @@ import (
 	"github.com/stianeikeland/go-rpio"
 )
 
-type rpiController struct{}
-
-var (
-	heat1 = rpio.Pin(17)
-	heat2 = rpio.Pin(21)
-	heat3 = rpio.Pin(22)
-)
+type rpiController struct {
+	heat1 rpio.Pin
+	heat2 rpio.Pin
+	heat3 rpio.Pin
+}
 
 func NewRpiController() (controller.Controller, error) {
 	err := rpio.Open()
 	if err != nil {
-		return nil, fmt.Errorf("failed to open RPi controller: %s\n", err)
+		return nil, fmt.Errorf("failed to open RPi controller: %s", err)
 	}
-	return &rpiController{}, nil
+	return &rpiController{
+		heat1: rpio.Pin(17),
+		heat2: rpio.Pin(21),
+		heat3: rpio.Pin(22),
+	}, nil
 }
 
 func (c *rpiController) Off(output int) {
 	if output == 1 {
-		heat1.High()
+		c.heat1.High()
 	} else if output == 2 {
-		heat2.High()
+		c.heat2.High()
 	} else if output == 3 {
-		heat3.High()
+		c.heat3.High()
 	}
 }
 
 func (c *rpiController) Heat(output int) {
 	if output == 1 {
-		heat1.Low()
+		c.heat1.Low()
 	} else if output == 2 {
-		heat2.Low()
+		c.heat2.Low()
 	} else if output == 3 {
-		heat3.Low()
+		c.heat3.Low()
 	}
 }
