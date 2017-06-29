@@ -1,6 +1,6 @@
 package fakesensor
 
-import "../../sensor"
+import "github.com/philippebeaulieu/rpi-thermostat/sensor"
 
 type fakesensor struct {
 }
@@ -9,6 +9,6 @@ func NewFakeSensor() (sensor.Sensor, error) {
 	return &fakesensor{}, nil
 }
 
-func (d *fakesensor) GetTemperature() (int, error) {
-	return 21, nil
+func (d *fakesensor) GetTemperature() (float32, error) {
+	return 21.2, nil
 }

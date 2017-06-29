@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"time"
 
-	"../thermostat"
+	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -21,7 +21,7 @@ func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
 
 func (d *Database) Run() {
 	for {
-		saveData(d.thermostat.Get().Current, d.thermostat.Get().Desired, d.thermostat.Get().Power, d.thermostat.Get().Sysmode)
+		saveData(int(d.thermostat.Get().Current), d.thermostat.Get().Desired, d.thermostat.Get().Power, d.thermostat.Get().Sysmode)
 		<-time.After(1 * time.Minute)
 	}
 }

@@ -5,34 +5,30 @@ import (
 	"os"
 	"os/signal"
 
-	"./api"
-	"./controller/fakecontroller"
-	"./database"
-	"./sensor/fakesensor"
-	"./thermostat"
+	"github.com/philippebeaulieu/rpi-thermostat/api"
+	"github.com/philippebeaulieu/rpi-thermostat/controller/rpi"
+	"github.com/philippebeaulieu/rpi-thermostat/database"
+	"github.com/philippebeaulieu/rpi-thermostat/sensor/ds18b20"
+	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
 )
 
 func main() {
-	sensor, err := fakesensor.NewFakeSensor()
+	sensor, err := ds18b20.NewDs18b20("28-041685fc45ff")
 	if err != nil {
 		fmt.Printf("failed to create sensor: %v\n", err)
 		return
 	}
 
-	controller, err := fakecontroller.NewFakeController()
+	controller, err := rpi.NewRpiController()
 	if err != nil {
 		fmt.Printf("failed to create controller: %v\n", err)
 		return
 	}
 
-	thermostat, err := thermostat.NewThermostat(sensor, controller, 21)
-	if err != nil {
-		fmt.Printf("failed to create thermostat: %v\n", err)
-		return
-	}
+	thermostat := thermostat.NewThermostat(sensor, controller, 21)
 	go thermostat.Run()
 
-	apiserver := apiserver.NewAPIServer(thermostat)
+	apiserver := apiserver.NewAPIServer(thermostat, 80)
 	go apiserver.Run()
 
 	database, err := database.NewDatabase(thermostat)

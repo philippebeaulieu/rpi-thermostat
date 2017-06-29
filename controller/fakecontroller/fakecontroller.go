@@ -1,6 +1,6 @@
 package fakecontroller
 
-import "../../controller"
+import "github.com/philippebeaulieu/rpi-thermostat/controller"
 
 type fakecontroller struct {
 }

@@ -5,7 +5,7 @@ import (
 	"os"
 	"strconv"
 
-	"../../sensor"
+	"github.com/philippebeaulieu/rpi-thermostat/sensor"
 )
 
 type ds18b20 struct {
@@ -13,12 +13,20 @@ type ds18b20 struct {
 }
 
 func NewDs18b20(deviceid string) (sensor.Sensor, error) {
-	return &ds18b20{
+
+	ds18b20 := &ds18b20{
 		deviceid: deviceid,
-	}, nil
+	}
+
+	_, err := ds18b20.GetTemperature()
+	if err != nil {
+		return nil, err
+	}
+
+	return ds18b20, nil
 }
 
-func (d *ds18b20) GetTemperature() (int, error) {
+func (d *ds18b20) GetTemperature() (float32, error) {
 
 	f, err := os.Open("/sys/bus/w1/devices/" + d.deviceid + "/w1_slave")
 	if err != nil {
@@ -37,7 +45,7 @@ func (d *ds18b20) GetTemperature() (int, error) {
 
 	temp, err := strconv.Atoi(s[len(s)-5:])
 
-	return temp / 100, err
+	return float32(temp) / 1000, err
 }
 
 func readln(r *bufio.Reader) (string, error) {

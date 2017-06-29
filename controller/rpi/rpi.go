@@ -3,7 +3,7 @@ package rpi
 import (
 	"fmt"
 
-	"../../controller"
+	"github.com/philippebeaulieu/rpi-thermostat/controller"
 	"github.com/stianeikeland/go-rpio"
 )
 
@@ -26,21 +26,21 @@ func NewRpiController() (controller.Controller, error) {
 }
 
 func (c *rpiController) Off(output int) {
-	if output == 1 {
+	if output == 0 {
 		c.heat1.High()
-	} else if output == 2 {
+	} else if output == 1 {
 		c.heat2.High()
-	} else if output == 3 {
+	} else if output == 2 {
 		c.heat3.High()
 	}
 }
 
 func (c *rpiController) Heat(output int) {
-	if output == 1 {
+	if output == 0 {
 		c.heat1.Low()
-	} else if output == 2 {
+	} else if output == 1 {
 		c.heat2.Low()
-	} else if output == 3 {
+	} else if output == 2 {
 		c.heat3.Low()
 	}
 }

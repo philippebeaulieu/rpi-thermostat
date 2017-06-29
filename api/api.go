@@ -6,12 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
 
-	"../thermostat"
+	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
 )
 
 type Apiserver struct {
 	thermostat *thermostat.Thermostat
+	port       int
 }
 
 func (s *Apiserver) updateHandler(r *http.Request) int {
@@ -54,14 +56,15 @@ func (s *Apiserver) apiHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("%s %s %s %d", r.RemoteAddr, r.Method, r.URL, 200)
 }
 
-func NewAPIServer(thermostat *thermostat.Thermostat) *Apiserver {
+func NewAPIServer(thermostat *thermostat.Thermostat, port int) *Apiserver {
 	return &Apiserver{
 		thermostat: thermostat,
+		port:       port,
 	}
 }
 
 func (s *Apiserver) Run() {
 	http.HandleFunc("/api", s.apiHandler)
 	http.Handle("/", http.FileServer(http.Dir("./ui")))
-	http.ListenAndServe(":80", nil)
+	http.ListenAndServe(":"+strconv.Itoa(s.port), nil)
 }

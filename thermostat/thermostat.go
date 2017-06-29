@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"../controller"
-	"../sensor"
+	"github.com/philippebeaulieu/rpi-thermostat/controller"
+	"github.com/philippebeaulieu/rpi-thermostat/sensor"
 )
 
 type Thermostat struct {
@@ -14,18 +14,18 @@ type Thermostat struct {
 	sysmode    string
 	power      int
 	desired    int
-	current    int
+	current    float32
 	pwmTotals  [3]int
 }
 
 type State struct {
-	Current int    `json:"current"`
-	Desired int    `json:"desired"`
-	Sysmode string `json:"sysmode"`
-	Power   int    `json:"power"`
+	Current float32 `json:"current"`
+	Desired int     `json:"desired"`
+	Sysmode string  `json:"sysmode"`
+	Power   int     `json:"power"`
 }
 
-func NewThermostat(sensor sensor.Sensor, controller controller.Controller, desired int) (*Thermostat, error) {
+func NewThermostat(sensor sensor.Sensor, controller controller.Controller, desired int) *Thermostat {
 	return &Thermostat{
 		sensor:     sensor,
 		controller: controller,
@@ -33,7 +33,7 @@ func NewThermostat(sensor sensor.Sensor, controller controller.Controller, desir
 		desired:    desired,
 		current:    0,
 		pwmTotals:  [3]int{0, -3, -6},
-	}, nil
+	}
 }
 
 func (t *Thermostat) Run() {
@@ -53,8 +53,13 @@ func (t *Thermostat) Run() {
 }
 
 func (t *Thermostat) Put(state State) {
-	t.current = state.Current
-	t.desired = state.Desired
+	if state.Desired < 5 {
+		t.desired = 5
+	} else if state.Desired > 30 {
+		t.desired = 30
+	} else {
+		t.desired = state.Desired
+	}
 	t.sysmode = state.Sysmode
 	t.Update()
 }
@@ -64,18 +69,19 @@ func (t *Thermostat) Get() State {
 		Current: t.current,
 		Desired: t.desired,
 		Sysmode: t.sysmode,
+		Power:   t.power,
 	}
 }
 
 func (t *Thermostat) Update() {
 	if t.sysmode == "off" {
 		t.power = 0
+		t.controller.Off(0)
 		t.controller.Off(1)
 		t.controller.Off(2)
-		t.controller.Off(3)
 	} else {
 
-		power := (t.desired * 10) - t.current //current needs to be divided by 10 to get real value IE. 221 = 22.1°C
+		power := int((float32(t.desired) - t.current) * 10)
 
 		if power < 0 {
 			power = 0
@@ -89,10 +95,9 @@ func (t *Thermostat) Update() {
 
 	}
 
+	pwm(t, 0)
 	pwm(t, 1)
 	pwm(t, 2)
-	pwm(t, 3)
-
 }
 
 func pwm(t *Thermostat, output int) {

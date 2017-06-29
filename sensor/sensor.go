@@ -1,5 +1,5 @@
 package sensor
 
 type Sensor interface {
-	GetTemperature() (int, error)
+	GetTemperature() (float32, error)
 }
