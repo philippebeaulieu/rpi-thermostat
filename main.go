@@ -6,7 +6,7 @@ import (
 	"os/signal"
 
 	"./api"
-	"./controller/rpi"
+	"./controller/fake"
 	"./database"
 	"./sensor/ds18b20"
 	"./thermostat"
@@ -19,7 +19,7 @@ func main() {
 		return
 	}
 
-	controller, err := rpi.NewRpiController()
+	controller, err := fake.NewFakeController()
 	if err != nil {
 		fmt.Printf("failed to create controller: %v\n", err)
 		return
