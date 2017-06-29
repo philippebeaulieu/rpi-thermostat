@@ -19,7 +19,7 @@ func (s *Apiserver) updateHandler(r *http.Request) int {
 	if err != nil {
 		return http.StatusBadRequest
 	}
-	state := thermostat.ThermostatState{}
+	state := thermostat.State{}
 	err = json.Unmarshal(body, &state)
 	if err != nil {
 		return http.StatusBadRequest
