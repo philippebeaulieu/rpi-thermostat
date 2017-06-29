@@ -6,20 +6,20 @@ import (
 	"os/signal"
 
 	"./api"
-	"./controller/fake"
+	"./controller/fakecontroller"
 	"./database"
-	"./sensor/ds18b20"
+	"./sensor/fakesensor"
 	"./thermostat"
 )
 
 func main() {
-	sensor, err := ds18b20.NewDs18b20()
+	sensor, err := fakesensor.NewFakeSensor()
 	if err != nil {
 		fmt.Printf("failed to create sensor: %v\n", err)
 		return
 	}
 
-	controller, err := fake.NewFakeController()
+	controller, err := fakecontroller.NewFakeController()
 	if err != nil {
 		fmt.Printf("failed to create controller: %v\n", err)
 		return
