@@ -21,17 +21,17 @@ func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
 
 func (d *Database) Run() {
 	for {
-		saveData(int(d.thermostat.Get().Current), d.thermostat.Get().Desired, d.thermostat.Get().Power, d.thermostat.Get().Sysmode)
+		saveData(int(d.thermostat.Get().Current), d.thermostat.Get().Desired, d.thermostat.Get().Power, d.thermostat.Get().Sysmode, d.thermostat.Weather.TempC, d.thermostat.Weather.WindKph, d.thermostat.Weather.Humidity)
 		<-time.After(1 * time.Minute)
 	}
 }
 
-func saveData(current int, desired int, power int, sysmode string) {
+func saveData(current int, desired int, power int, sysmode string, outsideTemp float32, wind float32, humidity int) {
 	db, err := sql.Open("mysql", "thermostat:GDeWFE8Hg3aKh44@tcp(192.168.2.41:3306)/rpi-thermostat?charset=utf8")
 	checkErr(err)
-	stmt, err := db.Prepare("INSERT temp_data SET time=NOW(),current=?,desired=?,power=?,sysmode=?")
+	stmt, err := db.Prepare("INSERT temp_data SET time=NOW(),current=?,desired=?,power=?,sysmode=?, outside_temp=?, wind=?, humidity=?")
 	checkErr(err)
-	_, err = stmt.Exec(current, desired, power, sysmode)
+	_, err = stmt.Exec(current, desired, power, sysmode, int(outsideTemp), int(wind), humidity)
 	checkErr(err)
 }
 

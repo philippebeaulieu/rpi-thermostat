@@ -6,20 +6,23 @@ import (
 	"os/signal"
 
 	"github.com/philippebeaulieu/rpi-thermostat/api"
-	"github.com/philippebeaulieu/rpi-thermostat/controller/rpi"
+	"github.com/philippebeaulieu/rpi-thermostat/controller/fakecontroller"
 	"github.com/philippebeaulieu/rpi-thermostat/database"
-	"github.com/philippebeaulieu/rpi-thermostat/sensor/ds18b20"
+	"github.com/philippebeaulieu/rpi-thermostat/sensor/fakesensor"
 	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
+	"github.com/philippebeaulieu/rpi-thermostat/weather/apixu"
 )
 
 func main() {
-	sensor, err := ds18b20.NewDs18b20("28-041685fc45ff")
+	// sensor, err := ds18b20.NewDs18b20("28-041685fc45ff")
+	sensor, err := fakesensor.NewFakeSensor()
 	if err != nil {
 		fmt.Printf("failed to create sensor: %v\n", err)
 		return
 	}
 
-	controller, err := rpi.NewRpiController()
+	// controller, err := rpi.NewRpiController()
+	controller, err := fakecontroller.NewFakeController()
 	if err != nil {
 		fmt.Printf("failed to create controller: %v\n", err)
 		return
@@ -28,7 +31,11 @@ func main() {
 	thermostat := thermostat.NewThermostat(sensor, controller, 21)
 	go thermostat.Run()
 
-	apiserver := apiserver.NewAPIServer(thermostat, 80)
+	weather := apixu.NewApixuWeather(thermostat, "61a17a8fdb264c2eaba152957173006", "J7J0B7")
+	go weather.Run()
+
+	// apiserver := apiserver.NewAPIServer(thermostat, 80)
+	apiserver := apiserver.NewAPIServer(thermostat, 8080)
 	go apiserver.Run()
 
 	database, err := database.NewDatabase(thermostat)

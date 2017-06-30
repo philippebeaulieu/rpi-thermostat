@@ -6,6 +6,7 @@ import (
 
 	"github.com/philippebeaulieu/rpi-thermostat/controller"
 	"github.com/philippebeaulieu/rpi-thermostat/sensor"
+	"github.com/philippebeaulieu/rpi-thermostat/weather"
 )
 
 type Thermostat struct {
@@ -16,13 +17,17 @@ type Thermostat struct {
 	desired    int
 	current    float32
 	pwmTotals  [3]int
+	Weather    weather.State
 }
 
 type State struct {
-	Current float32 `json:"current"`
-	Desired int     `json:"desired"`
-	Sysmode string  `json:"sysmode"`
-	Power   int     `json:"power"`
+	Current     float32 `json:"current"`
+	Desired     int     `json:"desired"`
+	Sysmode     string  `json:"sysmode"`
+	Power       int     `json:"power"`
+	OutsideTemp float32 `json:"outside_temp"`
+	Wind        float32 `json:"wind"`
+	Humidity    int     `json:"humidity"`
 }
 
 func NewThermostat(sensor sensor.Sensor, controller controller.Controller, desired int) *Thermostat {
@@ -66,10 +71,13 @@ func (t *Thermostat) Put(state State) {
 
 func (t *Thermostat) Get() State {
 	return State{
-		Current: t.current,
-		Desired: t.desired,
-		Sysmode: t.sysmode,
-		Power:   t.power,
+		Current:     t.current,
+		Desired:     t.desired,
+		Sysmode:     t.sysmode,
+		Power:       t.power,
+		OutsideTemp: t.Weather.TempC,
+		Wind:        t.Weather.WindKph,
+		Humidity:    t.Weather.Humidity,
 	}
 }
 
