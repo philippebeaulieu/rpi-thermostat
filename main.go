@@ -8,6 +8,7 @@ import (
 	"github.com/philippebeaulieu/rpi-thermostat/api"
 	"github.com/philippebeaulieu/rpi-thermostat/controller/fakecontroller"
 	"github.com/philippebeaulieu/rpi-thermostat/database"
+	"github.com/philippebeaulieu/rpi-thermostat/datagatherer"
 	"github.com/philippebeaulieu/rpi-thermostat/sensor/fakesensor"
 	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
 	"github.com/philippebeaulieu/rpi-thermostat/weather/apixu"
@@ -34,12 +35,23 @@ func main() {
 	weather := apixu.NewApixuWeather(thermostat, "61a17a8fdb264c2eaba152957173006", "J7J0B7")
 	go weather.Run()
 
-	// apiserver := apiserver.NewAPIServer(thermostat, 80)
-	apiserver := apiserver.NewAPIServer(thermostat, 8080)
-	go apiserver.Run()
-
 	database, err := database.NewDatabase(thermostat)
-	go database.Run()
+	if err != nil {
+		fmt.Printf("failed to create database: %v\n", err)
+		return
+	}
+
+	datagatherer, err := datagatherer.NewDataGatherer(thermostat, database)
+	if err != nil {
+		fmt.Printf("failed to create datagatherer: %v\n", err)
+		return
+	}
+
+	go datagatherer.Run()
+
+	// apiserver := apiserver.NewAPIServer(thermostat, datagatherer, 80)
+	apiserver := apiserver.NewAPIServer(thermostat, datagatherer, 8080)
+	go apiserver.Run()
 
 	done := make(chan struct{})
 	go func() {

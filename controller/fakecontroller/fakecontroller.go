@@ -5,6 +5,7 @@ import "github.com/philippebeaulieu/rpi-thermostat/controller"
 type fakecontroller struct {
 }
 
+// NewFakeController is use as a constructor
 func NewFakeController() (controller.Controller, error) {
 	return &fakecontroller{}, nil
 }

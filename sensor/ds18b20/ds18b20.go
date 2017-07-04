@@ -12,6 +12,7 @@ type ds18b20 struct {
 	deviceid string
 }
 
+// NewDs18b20 is use as a constructor
 func NewDs18b20(deviceid string) (sensor.Sensor, error) {
 
 	ds18b20 := &ds18b20{

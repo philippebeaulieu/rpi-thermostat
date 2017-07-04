@@ -13,6 +13,7 @@ type rpiController struct {
 	heat3 rpio.Pin
 }
 
+// NewRpiController is use as a constructor
 func NewRpiController() (controller.Controller, error) {
 	err := rpio.Open()
 	if err != nil {

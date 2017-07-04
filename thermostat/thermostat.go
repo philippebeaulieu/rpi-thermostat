@@ -9,17 +9,15 @@ import (
 	"github.com/philippebeaulieu/rpi-thermostat/weather"
 )
 
+// Thermostat is use as a reference struct for constructor
 type Thermostat struct {
 	sensor     sensor.Sensor
 	controller controller.Controller
-	sysmode    string
-	power      int
-	desired    int
-	current    float32
 	pwmTotals  [3]int
-	Weather    weather.State
+	state      State
 }
 
+// State contains a snapshot of current data
 type State struct {
 	Current     float32 `json:"current"`
 	Desired     int     `json:"desired"`
@@ -30,66 +28,64 @@ type State struct {
 	Humidity    int     `json:"humidity"`
 }
 
+// NewThermostat is use as a constructor
 func NewThermostat(sensor sensor.Sensor, controller controller.Controller, desired int) *Thermostat {
 	return &Thermostat{
 		sensor:     sensor,
 		controller: controller,
-		sysmode:    "off",
-		desired:    desired,
-		current:    0,
-		pwmTotals:  [3]int{0, -3, -6},
+		state: State{
+			Sysmode: "off",
+			Desired: desired,
+			Current: 0,
+		},
+		pwmTotals: [3]int{0, -3, -6},
 	}
 }
 
+// Run starts the thermostat processes
 func (t *Thermostat) Run() {
 	for {
 		current, err := t.sensor.GetTemperature()
 		if err != nil {
 			fmt.Println(err)
 			fmt.Printf("switching system off due to sensor failure")
-			t.sysmode = "off"
-			t.Update()
+			t.state.Sysmode = "off"
+			t.update()
 		} else {
-			t.current = current
-			t.Update()
+			t.state.Current = current
+			t.update()
 		}
 		<-time.After(10 * time.Second)
 	}
 }
 
+// Put receives a state an transfer its values to the thermostat
 func (t *Thermostat) Put(state State) {
 	if state.Desired < 5 {
-		t.desired = 5
+		t.state.Desired = 5
 	} else if state.Desired > 30 {
-		t.desired = 30
+		t.state.Desired = 30
 	} else {
-		t.desired = state.Desired
+		t.state.Desired = state.Desired
 	}
-	t.sysmode = state.Sysmode
-	t.Update()
+	t.state.Sysmode = state.Sysmode
+	t.update()
 }
 
+// Get takes actual thermostat values and returns them as a State
 func (t *Thermostat) Get() State {
-	return State{
-		Current:     t.current,
-		Desired:     t.desired,
-		Sysmode:     t.sysmode,
-		Power:       t.power,
-		OutsideTemp: t.Weather.TempC,
-		Wind:        t.Weather.WindKph,
-		Humidity:    t.Weather.Humidity,
-	}
+	return t.state
 }
 
-func (t *Thermostat) Update() {
-	if t.sysmode == "off" {
-		t.power = 0
+func (t *Thermostat) update() {
+	if t.state.Sysmode == "off" {
+		t.state.Power = 0
 		t.controller.Off(0)
 		t.controller.Off(1)
 		t.controller.Off(2)
 	} else {
 
-		power := int((float32(t.desired) - t.current) * 10)
+		power := int((float32(t.state.Desired) - t.state.Current) * 10)
 
 		if power < 0 {
 			power = 0
@@ -99,7 +95,7 @@ func (t *Thermostat) Update() {
 			power = 9
 		}
 
-		t.power = power
+		t.state.Power = power
 
 	}
 
@@ -116,10 +112,17 @@ func pwm(t *Thermostat, output int) {
 		t.pwmTotals[output] = 0
 	}
 
-	if t.pwmTotals[output] >= 0 && t.pwmTotals[output] < t.power {
+	if t.pwmTotals[output] >= 0 && t.pwmTotals[output] < t.state.Power {
 		t.controller.Heat(output)
 	} else {
 		t.controller.Off(output)
 	}
 
+}
+
+// LoadWeatherState receives a weather state and loads it into the thermostat state
+func (t *Thermostat) LoadWeatherState(weather weather.State) {
+	t.state.Current = weather.TempC
+	t.state.Humidity = weather.Humidity
+	t.state.Wind = weather.WindKph
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/philippebeaulieu/rpi-thermostat/weather"
 )
 
+// Apixu is use as a reference struct for constructor
 type Apixu struct {
 	thermostat *thermostat.Thermostat
 	apikey     string
@@ -37,6 +38,7 @@ type apixuResponse struct {
 	Current  apixuCurrentReponse  `json:"current"`
 }
 
+// NewApixuWeather is use as a constructor
 func NewApixuWeather(thermostat *thermostat.Thermostat, apikey string, location string) *Apixu {
 	return &Apixu{
 		thermostat: thermostat,
@@ -45,6 +47,7 @@ func NewApixuWeather(thermostat *thermostat.Thermostat, apikey string, location 
 	}
 }
 
+//GetWeather returns actual weather values
 func (a *Apixu) GetWeather() (weather.State, error) {
 	res, err := http.Get("https://api.apixu.com/v1/current.json?key=" + a.apikey + "&q=" + a.location)
 	if err != nil {
@@ -69,11 +72,12 @@ func (a *Apixu) GetWeather() (weather.State, error) {
 	}, nil
 }
 
+// Run starts the thermostat processes
 func (a *Apixu) Run() {
 	for {
 		weather, err := a.GetWeather()
 		if err == nil {
-			a.thermostat.Weather = weather
+			a.thermostat.LoadWeatherState(weather)
 		}
 		<-time.After(15 * time.Minute)
 	}
