@@ -105,10 +105,15 @@
 	    }
 	  };
 
-		// $interval(function(){
-		// 	var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, {query: {isArray: true}});
-		// 	$scope.data = Data.query();
-		// },(60*60*1000));
+		$interval(function(){
+			var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, {query: {isArray: false}});
+			var values = Data.query().$promise.then(function (response) {
+				$scope.data.push(response.interior);
+				$scope.data.push(response.exterior);
+				$scope.data.push(response.desired);
+				$scope.data.push(response.power);
+			});
+		},(60*60*1000));
 
 		var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, {query: {isArray: false}});
 			var values = Data.query().$promise.then(function (response) {
