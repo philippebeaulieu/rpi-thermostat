@@ -86,7 +86,15 @@ func (s *Apiserver) apiPastStatesHandler(w http.ResponseWriter, r *http.Request)
 	log.Printf("%s %s %s %d", r.RemoteAddr, r.Method, r.URL, 200)
 }
 
-func convertStatesToReponse(states []thermostat.State) [][]int {
+//PastState is used to return past states to webui
+type pastState struct {
+	Interior []int `json:"interior"`
+	Exterior []int `json:"exterior"`
+	Desired  []int `json:"desired"`
+	Power    []int `json:"power"`
+}
+
+func convertStatesToReponse(states []thermostat.State) pastState {
 	interior := make([]int, 24)
 	exterior := make([]int, 24)
 	desired := make([]int, 24)
@@ -99,7 +107,12 @@ func convertStatesToReponse(states []thermostat.State) [][]int {
 		power[i] = state.Power
 	}
 
-	return [][]int{interior, exterior, desired, power}
+	return pastState{
+		Interior: interior,
+		Exterior: exterior,
+		Desired:  desired,
+		Power:    power,
+	}
 }
 
 // NewAPIServer is use as a constructor

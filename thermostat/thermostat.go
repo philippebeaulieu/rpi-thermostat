@@ -122,7 +122,7 @@ func pwm(t *Thermostat, output int) {
 
 // LoadWeatherState receives a weather state and loads it into the thermostat state
 func (t *Thermostat) LoadWeatherState(weather weather.State) {
-	t.state.Current = weather.TempC
+	t.state.OutsideTemp = weather.TempC
 	t.state.Humidity = weather.Humidity
 	t.state.Wind = weather.WindKph
 }

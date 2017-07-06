@@ -63,7 +63,7 @@ func (q *Queue) ToArray() []thermostat.State {
 }
 
 func (q *Queue) nextIndex(i int) int {
-	if i >= q.size {
+	if i >= q.count-1 {
 		return 0
 	}
 
