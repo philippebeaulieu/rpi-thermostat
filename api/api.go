@@ -2,9 +2,7 @@ package apiserver
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -45,7 +43,7 @@ func (s *Apiserver) apiHandler(w http.ResponseWriter, r *http.Request) {
 		code = http.StatusNotImplemented
 	}
 	response := s.thermostat.Get()
-	fmt.Printf("%#v\n", response)
+	// fmt.Printf("%#v\n", response)
 	json, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Error marshalling JSON", http.StatusInternalServerError)
@@ -56,7 +54,7 @@ func (s *Apiserver) apiHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "", code)
 	}
 	w.Write(json)
-	log.Printf("%s %s %s %d", r.RemoteAddr, r.Method, r.URL, 200)
+	// log.Printf("%s %s %s %d", r.RemoteAddr, r.Method, r.URL, 200)
 }
 
 func (s *Apiserver) apiPastStatesHandler(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +70,7 @@ func (s *Apiserver) apiPastStatesHandler(w http.ResponseWriter, r *http.Request)
 
 	response := convertStatesToReponse(states)
 
-	fmt.Printf("%#v\n", response)
+	// fmt.Printf("%#v\n", response)
 	json, err := json.Marshal(response)
 	if err != nil {
 		http.Error(w, "Error marshalling JSON", http.StatusInternalServerError)
@@ -83,7 +81,7 @@ func (s *Apiserver) apiPastStatesHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "", code)
 	}
 	w.Write(json)
-	log.Printf("%s %s %s %d", r.RemoteAddr, r.Method, r.URL, 200)
+	// log.Printf("%s %s %s %d", r.RemoteAddr, r.Method, r.URL, 200)
 }
 
 //PastState is used to return past states to webui
