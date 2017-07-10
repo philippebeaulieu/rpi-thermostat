@@ -101,7 +101,7 @@ func convertStatesToReponse(states []thermostat.State) pastState {
 	power := make([]int, 24)
 
 	for i, state := range states {
-		time[i] = state.Time.Format("2006-01-02 15:04:05")
+		time[i] = state.Time.Format("2006-01-02T15:04:05")
 		interior[i] = int(state.Current)
 		exterior[i] = int(state.OutsideTemp)
 		desired[i] = state.Desired

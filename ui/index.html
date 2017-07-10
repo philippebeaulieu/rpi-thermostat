@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" ng-app="thermostat">
+
 <head>
 	<title>Thermostat Control</title>
 	<meta charset="utf-8">
@@ -7,11 +8,14 @@
 	<link rel="stylesheet" href="/css/bootstrap.min.css">
 	<link rel="icon" type="image/png" href="/thermostat.png" sizes="192x192">
 </head>
-<body> 
+
+<body>
 	<div ng-controller="ThermostatCtrl">
 		<div class="container-fluid" style="width:240px">
 			<div>
-				<p><h1>{{state.current}} ({{state.desired}})</h1></p>
+				<p>
+					<h1>{{state.current}} ({{state.desired}})</h1>
+				</p>
 				<p>power: {{state.power }}</p>
 				<p>outside: {{state.outside_temp }}</p>
 				<p>wide: {{state.wind }}</p>
@@ -41,8 +45,8 @@
 		<div class="panel panel-default">
 			<div class="panel-heading">Line Chart</div>
 			<div class="panel-body">
-				<canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels"
-					chart-hover="onHover" chart-series="series" chart-options="options"></canvas>
+				<canvas id="line" class="chart chart-line" chart-data="data" chart-labels="labels" chart-hover="onHover" chart-series="series"
+				 chart-dataset-override="datasetOverride" chart-options="options"></canvas>
 			</div>
 		</div>
 	</div>
@@ -56,74 +60,82 @@
 <script type="text/javascript">
 	var app = angular.module("thermostat", ["ngResource", "chart.js"]);
 	app.controller("ThermostatCtrl", ["$scope", "$resource", "$interval", function ($scope, $resource, $interval) {
-		$interval(function(){
-			var State = $resource(window.location.protocol + "//" + window.location.host + "/api/", {}, {query: {isArray: false}});
+		$interval(function () {
+			var State = $resource(window.location.protocol + "//" + window.location.host + "/api/", {}, { query: { isArray: false } });
 			$scope.state = State.query();
-		},10000);
+		}, 10000);
 
-		var State = $resource(window.location.protocol + "//" + window.location.host + "/api/", {}, {query: {isArray: false}});
+		var State = $resource(window.location.protocol + "//" + window.location.host + "/api/", {}, { query: { isArray: false } });
 		$scope.state = State.query();
-	
-		$scope.setSystemMode = function(mode) {
+
+		$scope.setSystemMode = function (mode) {
 			$scope.state.sysmode = mode
 			console.log($scope.state.$save());
 		}
-	
-		$scope.changeDesired = function(change) {
+
+		$scope.changeDesired = function (change) {
 			$scope.state.desired = $scope.state.desired + change;
 			$scope.state.$save();
 		}
 	}]);
-	
+
 	app.controller("LineCtrl", ["$scope", "$resource", "$interval", function ($scope, $resource, $interval) {
 
-	  $scope.labels = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"];
-	  $scope.series = ['Intérieur', 'Extérieur', 'Demandé', 'Puissance'];
-	  $scope.data = [];
-	  $scope.datasetOverride = [{ yAxisID: 'y-axis-degree' }, { yAxisID: 'y-axis-degree' }, { yAxisID: 'y-axis-degree' }, { yAxisID: 'y-axis-power' }];
-	  $scope.options = {
-	    scales: {
-	      yAxes: [
-	        {
-	          id: 'y-axis-degree',
-	          type: 'linear',
-	          display: true,
-	          position: 'left',
-						min: -30,
-						max: 35
-	        },
-	        {
-	          id: 'y-axis-power',
-	          type: 'linear',
-	          display: true,
-	          position: 'right',
-						min: 0,
-						max: 9,
+		$scope.labels = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"];
+		$scope.series = ['Intérieur', 'Extérieur', 'Demandé', 'Puissance'];
+		$scope.data = [];
+		$scope.datasetOverride = [{ yAxisID: 'y-axis-degree' }, { yAxisID: 'y-axis-degree' }, { yAxisID: 'y-axis-degree' }, { yAxisID: 'y-axis-power' }];
+		$scope.options = {
+			scales: {
+				yAxes: [
+					{
+						id: 'y-axis-degree',
+						type: 'linear',
+						display: true,
+						position: 'left'
+						// ticks: {
+						// 	min: -30,
+						// 	max: 35
+						// }
+					},
+					{
+						id: 'y-axis-power',
+						type: 'linear',
+						display: true,
+						position: 'right',
+						ticks: {
+							min: 0,
+							max: 9
+						},
 						beginAtZero: true
-	        }
-	      ]
-	    }
-	  };
+					}
+				]
+			}
+		};
 
-		$interval(function(){
-			var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, {query: {isArray: false}});
+		$interval(function () {
+			var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, { query: { isArray: false } });
 			var values = Data.query().$promise.then(function (response) {
 				$scope.data.push(response.interior);
 				$scope.data.push(response.exterior);
 				$scope.data.push(response.desired);
 				$scope.data.push(response.power);
 			});
-		},(60*60*1000));
+		}, (60 * 60 * 1000));
 
-		var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, {query: {isArray: false}});
-			var values = Data.query().$promise.then(function (response) {
-				$scope.data.push(response.interior);
-				$scope.data.push(response.exterior);
-				$scope.data.push(response.desired);
-				$scope.data.push(response.power);
-			});
+		var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, { query: { isArray: false } });
+		var values = Data.query().$promise.then(function (response) {
+
+			for (i = 0; i < response.time.length; i++) {
+				$scope.labels[i] = new Date(response.time[i]).getHours();
+			}
+
+			$scope.data.push(response.interior);
+			$scope.data.push(response.exterior);
+			$scope.data.push(response.desired);
+			$scope.data.push(response.power);
+		});
 	}]);
-
 
 </script>
 
