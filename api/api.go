@@ -86,19 +86,22 @@ func (s *Apiserver) apiPastStatesHandler(w http.ResponseWriter, r *http.Request)
 
 //PastState is used to return past states to webui
 type pastState struct {
-	Interior []int `json:"interior"`
-	Exterior []int `json:"exterior"`
-	Desired  []int `json:"desired"`
-	Power    []int `json:"power"`
+	Time     []string `json:"time"`
+	Interior []int    `json:"interior"`
+	Exterior []int    `json:"exterior"`
+	Desired  []int    `json:"desired"`
+	Power    []int    `json:"power"`
 }
 
 func convertStatesToReponse(states []thermostat.State) pastState {
+	time := make([]string, 24)
 	interior := make([]int, 24)
 	exterior := make([]int, 24)
 	desired := make([]int, 24)
 	power := make([]int, 24)
 
 	for i, state := range states {
+		time[i] = state.Time.Format("2006-01-02 15:04:05")
 		interior[i] = int(state.Current)
 		exterior[i] = int(state.OutsideTemp)
 		desired[i] = state.Desired
@@ -106,6 +109,7 @@ func convertStatesToReponse(states []thermostat.State) pastState {
 	}
 
 	return pastState{
+		Time:     time,
 		Interior: interior,
 		Exterior: exterior,
 		Desired:  desired,
