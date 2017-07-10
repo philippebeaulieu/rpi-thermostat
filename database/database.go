@@ -19,7 +19,7 @@ type Database struct {
 
 // NewDatabase is use as a constructor
 func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
-	db, err := sql.Open("mysql", "thermostat:GDeWFE8Hg3aKh44@tcp(192.168.2.41:3306)/rpi-thermostat?charset=utf8")
+	db, err := sql.Open("mysql", "thermostat:GDeWFE8Hg3aKh44@tcp(192.168.2.41:3306)/rpi-thermostat?charset=utf8&parseTime=true")
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
 
 // GetPastStates returns a list of the last days saved states
 func (d *Database) GetPastStates() ([]thermostat.State, error) {
-	rows, err := d.db.Query("SELECT time, current, desired, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW() LIMIT 1440; ")
+	rows, err := d.db.Query("SELECT `time`, current, desired, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW() LIMIT 1440; ")
 	if err != nil {
 		return nil, err
 	}

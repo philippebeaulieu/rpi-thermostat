@@ -6,24 +6,24 @@ import (
 	"os/signal"
 
 	"github.com/philippebeaulieu/rpi-thermostat/api"
-	"github.com/philippebeaulieu/rpi-thermostat/controller/rpi"
+	"github.com/philippebeaulieu/rpi-thermostat/controller/fakecontroller"
 	"github.com/philippebeaulieu/rpi-thermostat/database"
 	"github.com/philippebeaulieu/rpi-thermostat/datagatherer"
-	"github.com/philippebeaulieu/rpi-thermostat/sensor/ds18b20"
+	"github.com/philippebeaulieu/rpi-thermostat/sensor/fakesensor"
 	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
 	"github.com/philippebeaulieu/rpi-thermostat/weather/apixu"
 )
 
 func main() {
-	sensor, err := ds18b20.NewDs18b20("28-041685fc45ff")
-	// sensor, err := fakesensor.NewFakeSensor()
+	// sensor, err := ds18b20.NewDs18b20("28-041685fc45ff")
+	sensor, err := fakesensor.NewFakeSensor()
 	if err != nil {
 		fmt.Printf("failed to create sensor: %v\n", err)
 		return
 	}
 
-	controller, err := rpi.NewRpiController()
-	// controller, err := fakecontroller.NewFakeController()
+	// controller, err := rpi.NewRpiController()
+	controller, err := fakecontroller.NewFakeController()
 	if err != nil {
 		fmt.Printf("failed to create controller: %v\n", err)
 		return
@@ -49,8 +49,8 @@ func main() {
 
 	go datagatherer.Run()
 
-	apiserver := apiserver.NewAPIServer(thermostat, datagatherer, 80)
-	// apiserver := apiserver.NewAPIServer(thermostat, datagatherer, 8080)
+	// apiserver := apiserver.NewAPIServer(thermostat, datagatherer, 80)
+	apiserver := apiserver.NewAPIServer(thermostat, datagatherer, 8080)
 	go apiserver.Run()
 
 	done := make(chan struct{})
