@@ -61,6 +61,7 @@ func (d *Datagatherer) GetPreviousDayStates() []thermostat.State {
 func (d *Datagatherer) Run() {
 	for {
 		state := d.thermostat.Get()
+		state.Time = time.Now()
 		d.database.SaveData(state)
 		d.queue.Push(state)
 		<-time.After(1 * time.Minute)

@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
 
@@ -31,7 +32,7 @@ func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
 
 // GetPastStates returns a list of the last days saved states
 func (d *Database) GetPastStates() ([]thermostat.State, error) {
-	rows, err := d.db.Query("SELECT current, desired, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW() LIMIT 1440; ")
+	rows, err := d.db.Query("SELECT time, current, desired, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW() LIMIT 1440; ")
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +40,7 @@ func (d *Database) GetPastStates() ([]thermostat.State, error) {
 	queue := statequeue.NewQueue(1440)
 
 	for rows.Next() {
+		var time time.Time
 		var current int
 		var desired int
 		var sysmode string
@@ -46,12 +48,13 @@ func (d *Database) GetPastStates() ([]thermostat.State, error) {
 		var wind int
 		var humidity int
 
-		err = rows.Scan(&current, &desired, &sysmode, &outsideTemp, &wind, &humidity)
+		err = rows.Scan(&time, &current, &desired, &sysmode, &outsideTemp, &wind, &humidity)
 		if err != nil {
 			return nil, err
 		}
 
 		state := thermostat.State{
+			Time:        time,
 			Current:     float32(current),
 			Desired:     desired,
 			Sysmode:     sysmode,
@@ -68,12 +71,12 @@ func (d *Database) GetPastStates() ([]thermostat.State, error) {
 
 // SaveData saves data to database
 func (d *Database) SaveData(state thermostat.State) error {
-	stmt, err := d.db.Prepare("INSERT temp_data SET time=NOW(),current=?,desired=?,power=?,sysmode=?, outside_temp=?, wind=?, humidity=?")
+	stmt, err := d.db.Prepare("INSERT temp_data SET time=?,current=?,desired=?,power=?,sysmode=?, outside_temp=?, wind=?, humidity=?")
 	if err != nil {
 		return err
 	}
 
-	_, err = stmt.Exec(state.Current, state.Desired, state.Power, state.Sysmode, int(state.OutsideTemp), int(state.Wind), state.Humidity)
+	_, err = stmt.Exec(state.Time, state.Current, state.Desired, state.Power, state.Sysmode, int(state.OutsideTemp), int(state.Wind), state.Humidity)
 
 	return err
 }

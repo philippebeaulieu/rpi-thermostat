@@ -19,13 +19,14 @@ type Thermostat struct {
 
 // State contains a snapshot of current data
 type State struct {
-	Current     float32 `json:"current"`
-	Desired     int     `json:"desired"`
-	Sysmode     string  `json:"sysmode"`
-	Power       int     `json:"power"`
-	OutsideTemp float32 `json:"outside_temp"`
-	Wind        float32 `json:"wind"`
-	Humidity    int     `json:"humidity"`
+	Time        time.Time `json:"time"`
+	Current     float32   `json:"current"`
+	Desired     int       `json:"desired"`
+	Sysmode     string    `json:"sysmode"`
+	Power       int       `json:"power"`
+	OutsideTemp float32   `json:"outside_temp"`
+	Wind        float32   `json:"wind"`
+	Humidity    int       `json:"humidity"`
 }
 
 // NewThermostat is use as a constructor
