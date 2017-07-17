@@ -76,7 +76,9 @@ func (d *Database) SaveData(state thermostat.State) error {
 		return err
 	}
 
-	_, err = stmt.Exec(state.Time, state.Current, state.Desired, state.Power, state.Sysmode, int(state.OutsideTemp), int(state.Wind), state.Humidity)
+	location, err := time.LoadLocation("Local")
+	t := state.Time.In(location).Unix()
+	_, err = stmt.Exec(t, state.Current, state.Desired, state.Power, state.Sysmode, int(state.OutsideTemp), int(state.Wind), state.Humidity)
 
 	return err
 }

@@ -1,9 +1,13 @@
 package datagatherer
 
-import "time"
-import "github.com/philippebeaulieu/rpi-thermostat/database"
-import "github.com/philippebeaulieu/rpi-thermostat/thermostat"
-import "github.com/philippebeaulieu/rpi-thermostat/thermostat/statequeue"
+import (
+	"fmt"
+	"time"
+
+	"github.com/philippebeaulieu/rpi-thermostat/database"
+	"github.com/philippebeaulieu/rpi-thermostat/thermostat"
+	"github.com/philippebeaulieu/rpi-thermostat/thermostat/statequeue"
+)
 
 // Datagatherer is use as a reference struct for constructor
 type Datagatherer struct {
@@ -61,8 +65,12 @@ func (d *Datagatherer) GetPreviousDayStates() []thermostat.State {
 func (d *Datagatherer) Run() {
 	for {
 		state := d.thermostat.Get()
-		state.Time = time.Now().Local()
-		d.database.SaveData(state)
+		state.Time = time.Now()
+		err := d.database.SaveData(state)
+		if err != nil {
+			fmt.Printf("failed to save data: %v\n", err)
+		}
+
 		d.queue.Push(state)
 		<-time.After(1 * time.Minute)
 	}
