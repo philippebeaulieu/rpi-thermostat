@@ -60,13 +60,17 @@
 <script type="text/javascript">
 	var app = angular.module("thermostat", ["ngResource", "chart.js"]);
 	app.controller("ThermostatCtrl", ["$scope", "$resource", "$interval", function ($scope, $resource, $interval) {
-		$interval(function () {
+		
+		var updateState = function(){
 			var State = $resource(window.location.protocol + "//" + window.location.host + "/api/", {}, { query: { isArray: false } });
 			$scope.state = State.query();
+		}
+		
+		$interval(function () {
+			updateState();
 		}, 10000);
 
-		var State = $resource(window.location.protocol + "//" + window.location.host + "/api/", {}, { query: { isArray: false } });
-		$scope.state = State.query();
+		updateState();
 
 		$scope.setSystemMode = function (mode) {
 			$scope.state.sysmode = mode
@@ -113,28 +117,26 @@
 			}
 		};
 
-		$interval(function () {
+		var graphDisplay = function(){
 			var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, { query: { isArray: false } });
 			var values = Data.query().$promise.then(function (response) {
+
+				for (i = 0; i < response.time.length; i++) {
+					$scope.labels[i] = new Date(response.time[i]).getHours();
+				}
+
 				$scope.data.push(response.interior);
 				$scope.data.push(response.exterior);
 				$scope.data.push(response.desired);
 				$scope.data.push(response.power);
 			});
+		}
+
+		$interval(function () {
+			graphDisplay();
 		}, (60 * 60 * 1000));
 
-		var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, { query: { isArray: false } });
-		var values = Data.query().$promise.then(function (response) {
-
-			for (i = 0; i < response.time.length; i++) {
-				$scope.labels[i] = new Date(response.time[i]).getHours();
-			}
-
-			$scope.data.push(response.interior);
-			$scope.data.push(response.exterior);
-			$scope.data.push(response.desired);
-			$scope.data.push(response.power);
-		});
+		graphDisplay();
 	}]);
 
 </script>
