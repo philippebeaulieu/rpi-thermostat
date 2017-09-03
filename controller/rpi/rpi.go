@@ -20,7 +20,7 @@ func NewRpiController() (controller.Controller, error) {
 		return nil, fmt.Errorf("failed to open RPi controller: %s", err)
 	}
 	return &rpiController{
-		heat1: rpio.Pin(27), //was 17
+		heat1: rpio.Pin(17),
 		heat2: rpio.Pin(21),
 		heat3: rpio.Pin(22),
 	}, nil
@@ -32,11 +32,11 @@ func (c *rpiController) Off(output int) {
 	c.heat2.Output()
 	c.heat3.Output()
 	if output == 0 {
-		c.heat1.High()
+		c.heat1.Low()
 	} else if output == 1 {
-		c.heat2.High()
+		c.heat2.Low()
 	} else if output == 2 {
-		c.heat3.High()
+		c.heat3.Low()
 	}
 }
 
@@ -46,10 +46,10 @@ func (c *rpiController) Heat(output int) {
 	c.heat2.Output()
 	c.heat3.Output()
 	if output == 0 {
-		c.heat1.Low()
+		c.heat1.High()
 	} else if output == 1 {
-		c.heat2.Low()
+		c.heat2.High()
 	} else if output == 2 {
-		c.heat3.Low()
+		c.heat3.High()
 	}
 }
