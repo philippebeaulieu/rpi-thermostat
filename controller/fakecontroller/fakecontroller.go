@@ -1,6 +1,10 @@
 package fakecontroller
 
-import "github.com/philippebeaulieu/rpi-thermostat/controller"
+import (
+	"fmt"
+
+	"github.com/philippebeaulieu/rpi-thermostat/controller"
+)
 
 type fakecontroller struct {
 }
@@ -11,7 +15,9 @@ func NewFakeController() (controller.Controller, error) {
 }
 
 func (c *fakecontroller) Off(output int) {
+	fmt.Printf("Pin %v OFF\n", output)
 }
 
 func (c *fakecontroller) Heat(output int) {
+	fmt.Printf("Pin %v ON\n", output)
 }
