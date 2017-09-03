@@ -15,6 +15,7 @@ import (
 )
 
 func main() {
+		fmt.Printf("starting\n")
 	sensor, err := ds18b20.NewDs18b20("28-041685fc45ff")
 	// sensor, err := fakesensor.NewFakeSensor()
 	if err != nil {
@@ -23,6 +24,7 @@ func main() {
 	}
 
 	controller, err := rpi.NewRpiController()
+	fmt.Printf("ctrl: %v\n",controller)
 	// controller, err := fakecontroller.NewFakeController()
 	if err != nil {
 		fmt.Printf("failed to create controller: %v\n", err)
