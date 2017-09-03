@@ -27,6 +27,7 @@ func NewRpiController() (controller.Controller, error) {
 }
 
 func (c *rpiController) Off(output int) {
+	fmt.Printf("Pin %v OFF\n", output)
 	if output == 0 {
 		c.heat1.High()
 	} else if output == 1 {
@@ -37,6 +38,7 @@ func (c *rpiController) Off(output int) {
 }
 
 func (c *rpiController) Heat(output int) {
+	fmt.Printf("Pin %v ON\n", output)
 	if output == 0 {
 		c.heat1.Low()
 	} else if output == 1 {
