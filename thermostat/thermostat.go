@@ -2,6 +2,7 @@ package thermostat
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/philippebeaulieu/rpi-thermostat/controller"
@@ -106,7 +107,7 @@ func (t *Thermostat) update() {
 			gain = 1.0
 		}
 
-		t.state.Power = int(float32(power) * gain)
+		t.state.Power = int(math.Ceil(float64(float32(power) * gain)))
 
 	}
 
