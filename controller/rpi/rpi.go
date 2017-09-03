@@ -20,7 +20,7 @@ func NewRpiController() (controller.Controller, error) {
 		return nil, fmt.Errorf("failed to open RPi controller: %s", err)
 	}
 	return &rpiController{
-		heat1: rpio.Pin(17),
+		heat1: rpio.Pin(27), //was 17
 		heat2: rpio.Pin(21),
 		heat3: rpio.Pin(22),
 	}, nil
