@@ -86,6 +86,16 @@ func (t *Thermostat) update() {
 		t.controller.Off(2)
 	} else {
 
+		power := int((float32(t.state.Desired) - t.state.Current) * 10)
+
+		if power < 0 {
+			power = 0
+		}
+
+		if power > 9 {
+			power = 9
+		}
+
 		gain := float32(float32(t.state.Desired)-t.state.OutsideTemp) / 30.0
 
 		if gain < 0.0 {
@@ -96,17 +106,7 @@ func (t *Thermostat) update() {
 			gain = 1.0
 		}
 
-		power := int((float32(t.state.Desired) - t.state.Current) * 10 * gain)
-
-		if power < 0 {
-			power = 0
-		}
-
-		if power > 9 {
-			power = 9
-		}
-
-		t.state.Power = power
+		t.state.Power = int(float32(power) * gain)
 
 	}
 
