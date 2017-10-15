@@ -18,8 +18,7 @@
 				</p>
 				<p>power: {{state.power }}</p>
 				<p>outside: {{state.outside_temp }}</p>
-				<p>wind: {{state.wind }}</p>
-				<p>humidity: {{state.humidity }}</p>
+				<p>time: {{state.time | date:'medium' }}</p>
 			</div>
 
 			<div>
@@ -35,7 +34,8 @@
 				<div>System</div>
 				<div class="btn-group" role="group">
 					<button ng-class="{'active': state.sysmode == 'off'}" class="btn btn-default btn-lg" ng-click="setSystemMode('off')">Off</button>
-					<button ng-class="{'active': state.sysmode == 'heat'}" class="btn btn-default btn-lg" ng-click="setSystemMode('heat')">Heat</button>
+					<button ng-class="{'active': state.sysmode == 'automatic'}" class="btn btn-default btn-lg" ng-click="setSystemMode('automatic')">Auto</button>
+					<button ng-class="{'active': state.sysmode == 'manuel'}" class="btn btn-default btn-lg" ng-click="setSystemMode('manuel')">Man.</button>
 				</div>
 			</div>
 		</div>

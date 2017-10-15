@@ -47,6 +47,7 @@ func NewThermostat(sensor sensor.Sensor, controller controller.Controller, desir
 // Run starts the thermostat processes
 func (t *Thermostat) Run() {
 	for {
+		t.state.Time = time.Now()
 		current, err := t.sensor.GetTemperature()
 		if err != nil {
 			fmt.Println(err)
@@ -80,6 +81,11 @@ func (t *Thermostat) Get() State {
 }
 
 func (t *Thermostat) update() {
+
+	if t.state.Sysmode == "automatic" {
+		t.state.Desired = getAutomaticTemp(t.state)
+	}
+
 	if t.state.Sysmode == "off" {
 		t.state.Power = 0
 		t.controller.Off(0)
@@ -114,6 +120,29 @@ func (t *Thermostat) update() {
 	pwm(t, 0)
 	pwm(t, 1)
 	pwm(t, 2)
+}
+
+func getAutomaticTemp(state State) int {
+	location, _ := time.LoadLocation("Local")
+
+	var hotTime time.Time
+	var coolTime time.Time
+	if state.Time.Weekday() >= 1 && state.Time.Weekday() <= 5 {
+		hotTime = time.Date(0, 0, 0, 16, 0, 0, 0, location)
+		coolTime = time.Date(0, 0, 0, 21, 0, 0, 0, location)
+	} else {
+		hotTime = time.Date(0, 0, 0, 8, 0, 0, 0, location)
+		coolTime = time.Date(0, 0, 0, 23, 0, 0, 0, location)
+	}
+
+	if (state.Time.Hour() > hotTime.Hour() ||
+		(state.Time.Hour() == hotTime.Hour() && state.Time.Minute() >= hotTime.Minute())) &&
+		(state.Time.Hour() < coolTime.Hour() ||
+			(state.Time.Hour() == coolTime.Hour() && state.Time.Minute() < coolTime.Minute())) {
+		return 21
+	}
+
+	return 5
 }
 
 func pwm(t *Thermostat, output int) {
