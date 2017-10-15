@@ -65,7 +65,6 @@ func (d *Datagatherer) GetPreviousDayStates() []thermostat.State {
 func (d *Datagatherer) Run() {
 	for {
 		state := d.thermostat.Get()
-		state.Time = time.Now()
 		err := d.database.SaveData(state)
 		if err != nil {
 			fmt.Printf("failed to save data: %v\n", err)
