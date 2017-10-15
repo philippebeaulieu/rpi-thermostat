@@ -32,7 +32,7 @@ func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
 
 // GetPastStates returns a list of the last days saved states
 func (d *Database) GetPastStates() ([]thermostat.State, error) {
-	rows, err := d.db.Query("SELECT `time`, current, desired, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN DATE_SUB(NOW(), INTERVAL 1 DAY) AND NOW() LIMIT 1440; ")
+	rows, err := d.db.Query("SELECT `time`, current, desired, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 1 DAY)) AND UNIX_TIMESTAMP(NOW()) LIMIT 1440; ")
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (d *Database) GetPastStates() ([]thermostat.State, error) {
 	queue := statequeue.NewQueue(1440)
 
 	for rows.Next() {
-		var time time.Time
+		var timestamp int64
 		var current int
 		var desired int
 		var sysmode string
@@ -48,13 +48,13 @@ func (d *Database) GetPastStates() ([]thermostat.State, error) {
 		var wind int
 		var humidity int
 
-		err = rows.Scan(&time, &current, &desired, &sysmode, &outsideTemp, &wind, &humidity)
+		err = rows.Scan(&timestamp, &current, &desired, &sysmode, &outsideTemp, &wind, &humidity)
 		if err != nil {
 			return nil, err
 		}
 
 		state := thermostat.State{
-			Time:        time,
+			Time:        time.Unix(timestamp, 0),
 			Current:     float32(current),
 			Desired:     desired,
 			Sysmode:     sysmode,
