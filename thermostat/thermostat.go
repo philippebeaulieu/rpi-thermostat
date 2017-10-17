@@ -164,11 +164,11 @@ func applyPower(t *Thermostat) {
 	var MinPower = 0
 	var MaxPower = 9
 
-	power := int((float32(t.state.SetPoint) - t.state.Current))
+	var setPoint = float64(t.state.SetPoint)
+	var current = float64(t.state.Current)
+	var outside = float64(t.state.Outside.Temp)
 
-	gain := (float32(int(t.state.Outside.Temp)-t.state.SetPoint-10) / -10.0)
-
-	power = int(math.Ceil(float64(float32(power) * gain)))
+	power := int(math.Ceil((setPoint - current) * ((outside - setPoint - 10) / -10.0)))
 
 	if power < MinPower {
 		power = MinPower
