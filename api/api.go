@@ -89,7 +89,7 @@ type pastState struct {
 	Time     []string `json:"time"`
 	Interior []int    `json:"interior"`
 	Exterior []int    `json:"exterior"`
-	Desired  []int    `json:"desired"`
+	SetPoint []int    `json:"setPoint"`
 	Power    []int    `json:"power"`
 }
 
@@ -97,14 +97,14 @@ func convertStatesToReponse(states []thermostat.State) pastState {
 	time := make([]string, 24)
 	interior := make([]int, 24)
 	exterior := make([]int, 24)
-	desired := make([]int, 24)
+	setPoint := make([]int, 24)
 	power := make([]int, 24)
 
 	for i, state := range states {
 		time[i] = state.Time.Format("2006-01-02T15:04:05")
 		interior[i] = int(state.Current)
-		exterior[i] = int(state.OutsideTemp)
-		desired[i] = state.Desired
+		exterior[i] = int(state.Outside.Temp)
+		setPoint[i] = state.SetPoint
 		power[i] = state.Power
 	}
 
@@ -112,7 +112,7 @@ func convertStatesToReponse(states []thermostat.State) pastState {
 		Time:     time,
 		Interior: interior,
 		Exterior: exterior,
-		Desired:  desired,
+		SetPoint: setPoint,
 		Power:    power,
 	}
 }

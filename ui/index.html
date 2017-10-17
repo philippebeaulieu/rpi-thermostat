@@ -10,22 +10,23 @@
 </head>
 
 <body>
+
 	<div ng-controller="ThermostatCtrl">
 		<div class="container-fluid" style="width:240px">
 			<div>
 				<p>
-					<h1>{{state.current}} ({{state.desired}})</h1>
+					<h1>{{state.current}} ({{displayedSetPoint}})</h1>
 				</p>
 				<p>power: {{state.power }}</p>
-				<p>outside: {{state.outside_temp }}</p>
+				<p>outside: {{state.outside.temp }}</p>
 				<p>time: {{state.time | date:'medium' }}</p>
 			</div>
 
 			<div>
-				<button class="btn btn-default btn-lg" ng-click="changeDesired(1)">
+				<button class="btn btn-default btn-lg" ng-click="changeManualTemp(1)">
 					<span class="glyphicon glyphicon-chevron-up"></span>
 				</button>
-				<button class="btn btn-default btn-lg" ng-click="changeDesired(-1)">
+				<button class="btn btn-default btn-lg" ng-click="changeManualTemp(-1)">
 					<span class="glyphicon glyphicon-chevron-down"></span>
 				</button>
 			</div>
@@ -35,7 +36,7 @@
 				<div class="btn-group" role="group">
 					<button ng-class="{'active': state.sysmode == 'off'}" class="btn btn-default btn-lg" ng-click="setSystemMode('off')">Off</button>
 					<button ng-class="{'active': state.sysmode == 'automatic'}" class="btn btn-default btn-lg" ng-click="setSystemMode('automatic')">Auto</button>
-					<button ng-class="{'active': state.sysmode == 'manuel'}" class="btn btn-default btn-lg" ng-click="setSystemMode('manuel')">Man.</button>
+					<button ng-class="{'active': state.sysmode == 'manual'}" class="btn btn-default btn-lg" ng-click="setSystemMode('manual')">Man.</button>
 				</div>
 			</div>
 		</div>
@@ -50,6 +51,158 @@
 			</div>
 		</div>
 	</div>
+
+	<div class="container" ng-controller="ThermostatCtrl">
+		<div class="row">
+			<div class="col-md-1">
+				<p>Lundi</p>
+				<p>de: {{state.settings.monday_start_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('monday', 'start', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('monday', 'start', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+				</p>
+				<p>à: {{state.settings.monday_stop_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('monday', 'stop', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('monday', 'stop', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1">
+				<p>Mardi</p>
+				<p>de: {{state.settings.tuesday_start_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('tuesday', 'start', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('tuesday', 'start', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+				</p>
+				<p>à: {{state.settings.tuesday_stop_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('tuesday', 'stop', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('tuesday', 'stop', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1">
+				<p>Mercredi</p>
+				<p>de: {{state.settings.wednesday_start_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('wednesday', 'start', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('wednesday', 'start', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+				</p>
+				<p>à: {{state.settings.wednesday_stop_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('wednesday', 'stop', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('wednesday', 'stop', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1">
+				<p>Jeudi</p>
+				<p>de: {{state.settings.thursday_start_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('thursday', 'start', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('thursday', 'start', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+				</p>
+				<p>à: {{state.settings.thursday_stop_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('thursday', 'stop', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('thursday', 'stop', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1">
+				<p>Vendredi</p>
+				<p>de: {{state.settings.friday_start_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('friday', 'start', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('friday', 'start', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+				</p>
+				<p>à: {{state.settings.friday_stop_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('friday', 'stop', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('friday', 'stop', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1">
+				<p>Samedi</p>
+				<p>de: {{state.settings.saturday_start_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('saturday', 'start', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('saturday', 'start', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+				</p>
+				<p>à: {{state.settings.saturday_stop_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('saturday', 'stop', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('saturday', 'stop', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1">
+				<p>Dimanche</p>
+				<p>de: {{state.settings.sunday_start_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('sunday', 'start', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('sunday', 'start', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+				</p>
+				<p>à: {{state.settings.sunday_stop_hour }}:00</p>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('sunday', 'stop', 1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeHour('sunday', 'stop', -1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1"></div>
+			<div class="col-md-1">
+				<p>Présent:</p>
+				<p>{{state.settings.present_temp }}°</p>
+				<button class="btn btn-default btn-xs" ng-click="changePresentTemp(1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changePresentTemp(-1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+			<div class="col-md-1">
+				<p>Absent:</p>
+				<p>{{state.settings.absent_temp }}°</p>
+				<button class="btn btn-default btn-xs" ng-click="changeAbsentTemp(1)">
+					<span class="glyphicon glyphicon-chevron-up"></span>
+				</button>
+				<button class="btn btn-default btn-xs" ng-click="changeAbsentTemp(-1)">
+					<span class="glyphicon glyphicon-chevron-down"></span>
+				</button>
+			</div>
+		</div>
+	</div>
 </body>
 
 <script src="/js/angular.min.js"></script>
@@ -60,12 +213,21 @@
 <script type="text/javascript">
 	var app = angular.module("thermostat", ["ngResource", "chart.js"]);
 	app.controller("ThermostatCtrl", ["$scope", "$resource", "$interval", function ($scope, $resource, $interval) {
-		
-		var updateState = function(){
+
+		var updateState = function () {
 			var State = $resource(window.location.protocol + "//" + window.location.host + "/api/", {}, { query: { isArray: false } });
 			$scope.state = State.query();
+
+			$scope.state.$promise.then(function (data) {
+				if ($scope.state.sysmode == "off")
+					$scope.displayedSetPoint = "-";
+				else if ($scope.state.sysmode == "automatic")
+					$scope.displayedSetPoint = $scope.state.set_point;
+				else if ($scope.state.sysmode == "manual")
+					$scope.displayedSetPoint = $scope.state.settings.manual_temp;
+			});
 		}
-		
+
 		$interval(function () {
 			updateState();
 		}, 10000);
@@ -74,12 +236,32 @@
 
 		$scope.setSystemMode = function (mode) {
 			$scope.state.sysmode = mode
-			console.log($scope.state.$save());
+			$scope.state.$save();
+			updateState();
 		}
 
-		$scope.changeDesired = function (change) {
-			$scope.state.desired = $scope.state.desired + change;
+		$scope.changeManualTemp = function (change) {
+			$scope.state.settings.manual_temp = $scope.state.settings.manual_temp + change;
 			$scope.state.$save();
+			updateState();
+		}
+
+		$scope.changePresentTemp = function (change) {
+			$scope.state.settings.present_temp = $scope.state.settings.present_temp + change;
+			$scope.state.$save();
+			updateState();
+		}
+
+		$scope.changeAbsentTemp = function (change) {
+			$scope.state.settings.absent_temp = $scope.state.settings.absent_temp + change;
+			$scope.state.$save();
+			updateState();
+		}
+
+		$scope.changeHour = function (day, position, change) {
+			$scope.state.settings[day + "_" + position + "_hour"] = $scope.state.settings[day + "_" + position + "_hour"] + change;
+			$scope.state.$save();
+			updateState();
 		}
 	}]);
 
@@ -117,7 +299,7 @@
 			}
 		};
 
-		var graphDisplay = function(){
+		var graphDisplay = function () {
 			var Data = $resource(window.location.protocol + "//" + window.location.host + "/api/paststates/", {}, { query: { isArray: false } });
 			var values = Data.query().$promise.then(function (response) {
 

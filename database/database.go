@@ -18,8 +18,8 @@ type Database struct {
 }
 
 // NewDatabase is use as a constructor
-func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
-	db, err := sql.Open("mysql", "thermostat:GDeWFE8Hg3aKh44@tcp(192.168.2.41:3306)/rpi-thermostat?charset=utf8&parseTime=true")
+func NewDatabase(thermostat *thermostat.Thermostat, url string, username string, password string) (*Database, error) {
+	db, err := sql.Open("mysql", username+":"+password+"@tcp("+url+")/rpi-thermostat?charset=utf8&parseTime=true")
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func NewDatabase(thermostat *thermostat.Thermostat) (*Database, error) {
 
 // GetPastStates returns a list of the last days saved states
 func (d *Database) GetPastStates() ([]thermostat.State, error) {
-	rows, err := d.db.Query("SELECT `time`, current, desired, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 1 DAY)) AND UNIX_TIMESTAMP(NOW()) LIMIT 1440; ")
+	rows, err := d.db.Query("SELECT `time`, current, desired AS setPoint, sysmode, outside_temp, wind, humidity FROM temp_data WHERE time BETWEEN UNIX_TIMESTAMP(DATE_SUB(NOW(), INTERVAL 1 DAY)) AND UNIX_TIMESTAMP(NOW()) LIMIT 1440; ")
 	if err != nil {
 		return nil, err
 	}
@@ -42,25 +42,27 @@ func (d *Database) GetPastStates() ([]thermostat.State, error) {
 	for rows.Next() {
 		var timestamp int64
 		var current int
-		var desired int
+		var setPoint int
 		var sysmode string
 		var outsideTemp int
 		var wind int
 		var humidity int
 
-		err = rows.Scan(&timestamp, &current, &desired, &sysmode, &outsideTemp, &wind, &humidity)
+		err = rows.Scan(&timestamp, &current, &setPoint, &sysmode, &outsideTemp, &wind, &humidity)
 		if err != nil {
 			return nil, err
 		}
 
 		state := thermostat.State{
-			Time:        time.Unix(timestamp, 0),
-			Current:     float32(current),
-			Desired:     desired,
-			Sysmode:     sysmode,
-			OutsideTemp: float32(outsideTemp),
-			Wind:        float32(wind),
-			Humidity:    humidity,
+			Time:     time.Unix(timestamp, 0),
+			Current:  float32(current),
+			SetPoint: setPoint,
+			Sysmode:  sysmode,
+			Outside: thermostat.Outside{
+				Temp:     float32(outsideTemp),
+				Wind:     float32(wind),
+				Humidity: humidity,
+			},
 		}
 
 		queue.Push(state)
@@ -78,7 +80,7 @@ func (d *Database) SaveData(state thermostat.State) error {
 
 	location, err := time.LoadLocation("Local")
 	t := state.Time.In(location).Unix()
-	_, err = stmt.Exec(t, state.Current, state.Desired, state.Power, state.Sysmode, int(state.OutsideTemp), int(state.Wind), state.Humidity)
+	_, err = stmt.Exec(t, state.Current, state.SetPoint, state.Power, state.Sysmode, int(state.Outside.Temp), int(state.Outside.Wind), state.Outside.Humidity)
 
 	return err
 }

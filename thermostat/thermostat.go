@@ -1,7 +1,9 @@
 package thermostat
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"time"
 
@@ -20,25 +22,52 @@ type Thermostat struct {
 
 // State contains a snapshot of current data
 type State struct {
-	Time        time.Time `json:"time"`
-	Current     float32   `json:"current"`
-	Desired     int       `json:"desired"`
-	Sysmode     string    `json:"sysmode"`
-	Power       int       `json:"power"`
-	OutsideTemp float32   `json:"outside_temp"`
-	Wind        float32   `json:"wind"`
-	Humidity    int       `json:"humidity"`
+	Time     time.Time `json:"time"`
+	Current  float32   `json:"current"`
+	SetPoint int       `json:"set_point"`
+	Sysmode  string    `json:"sysmode"`
+	Power    int       `json:"power"`
+	Outside  Outside   `json:"outside"`
+	Settings Settings  `json:"settings"`
+}
+
+// Outside information
+type Outside struct {
+	Temp     float32 `json:"temp"`
+	Wind     float32 `json:"wind"`
+	Humidity int     `json:"humidity"`
+}
+
+// Settings for thermostat
+type Settings struct {
+	ManualTemp         int `json:"manual_temp"`
+	PresentTemp        int `json:"present_temp"`
+	AbsentTemp         int `json:"absent_temp"`
+	MondayStartHour    int `json:"monday_start_hour"`
+	MondayStopHour     int `json:"monday_stop_hour"`
+	TuesdayStartHour   int `json:"tuesday_start_hour"`
+	TuesdayStopHour    int `json:"tuesday_stop_hour"`
+	WednesdayStartHour int `json:"wednesday_start_hour"`
+	WednesdayStopHour  int `json:"wednesday_stop_hour"`
+	ThursdayStartHour  int `json:"thursday_start_hour"`
+	ThursdayStopHour   int `json:"thursday_stop_hour"`
+	FridayStartHour    int `json:"friday_start_hour"`
+	FridayStopHour     int `json:"friday_stop_hour"`
+	SaturdayStartHour  int `json:"saturday_start_hour"`
+	SaturdayStopHour   int `json:"saturday_stop_hour"`
+	SundayStartHour    int `json:"sunday_start_hour"`
+	SundayStopHour     int `json:"sunday_stop_hour"`
 }
 
 // NewThermostat is use as a constructor
-func NewThermostat(sensor sensor.Sensor, controller controller.Controller, desired int) *Thermostat {
+func NewThermostat(sensor sensor.Sensor, controller controller.Controller) *Thermostat {
 	return &Thermostat{
 		sensor:     sensor,
 		controller: controller,
 		state: State{
-			Sysmode: "off",
-			Desired: desired,
-			Current: 0,
+			Sysmode:  "off",
+			Outside:  Outside{},
+			Settings: loadSettings(),
 		},
 		pwmTotals: [3]int{0, -3, -6},
 	}
@@ -64,15 +93,49 @@ func (t *Thermostat) Run() {
 
 // Put receives a state an transfer its values to the thermostat
 func (t *Thermostat) Put(state State) {
-	if state.Desired < 5 {
-		t.state.Desired = 5
-	} else if state.Desired > 30 {
-		t.state.Desired = 30
-	} else {
-		t.state.Desired = state.Desired
-	}
+	t.state.Settings.ManualTemp = minMax(state.Settings.ManualTemp, 5, 30)
+
+	t.state.Settings.PresentTemp = minMax(state.Settings.PresentTemp, 5, 30)
+	t.state.Settings.AbsentTemp = minMax(state.Settings.AbsentTemp, 5, 30)
+
+	t.state.Settings.MondayStartHour = minMax(state.Settings.MondayStartHour, 0, 23)
+	t.state.Settings.MondayStopHour = minMax(state.Settings.MondayStopHour, 0, 23)
+
+	t.state.Settings.TuesdayStartHour = minMax(state.Settings.TuesdayStartHour, 0, 23)
+	t.state.Settings.TuesdayStopHour = minMax(state.Settings.TuesdayStopHour, 0, 23)
+
+	t.state.Settings.WednesdayStartHour = minMax(state.Settings.WednesdayStartHour, 0, 23)
+	t.state.Settings.WednesdayStopHour = minMax(state.Settings.WednesdayStopHour, 0, 23)
+
+	t.state.Settings.ThursdayStartHour = minMax(state.Settings.ThursdayStartHour, 0, 23)
+	t.state.Settings.ThursdayStopHour = minMax(state.Settings.ThursdayStopHour, 0, 23)
+
+	t.state.Settings.FridayStartHour = minMax(state.Settings.FridayStartHour, 0, 23)
+	t.state.Settings.FridayStopHour = minMax(state.Settings.FridayStopHour, 0, 23)
+
+	t.state.Settings.SaturdayStartHour = minMax(state.Settings.SaturdayStartHour, 0, 23)
+	t.state.Settings.SaturdayStopHour = minMax(state.Settings.SaturdayStopHour, 0, 23)
+
+	t.state.Settings.SundayStartHour = minMax(state.Settings.SundayStartHour, 0, 23)
+	t.state.Settings.SundayStopHour = minMax(state.Settings.SundayStopHour, 0, 23)
+
+	saveSettings(t.state.Settings)
+
 	t.state.Sysmode = state.Sysmode
+
 	t.update()
+}
+
+func minMax(val int, min int, max int) int {
+	if val < min {
+		return min
+	}
+
+	if val > max {
+		return max
+	}
+
+	return val
 }
 
 // Get takes actual thermostat values and returns them as a State
@@ -83,39 +146,41 @@ func (t *Thermostat) Get() State {
 func (t *Thermostat) update() {
 
 	if t.state.Sysmode == "automatic" {
-		t.state.Desired = getAutomaticTemp(t.state)
-	}
-
-	if t.state.Sysmode == "off" {
+		t.state.SetPoint = getAutomaticTemp(t.state)
+		applyPower(t)
+	} else if t.state.Sysmode == "manual" {
+		t.state.SetPoint = t.state.Settings.ManualTemp
+		applyPower(t)
+	} else if t.state.Sysmode == "off" {
 		t.state.Power = 0
 		t.controller.Off(0)
 		t.controller.Off(1)
 		t.controller.Off(2)
-	} else {
-
-		power := int((float32(t.state.Desired) - t.state.Current) * 10)
-
-		if power < 0 {
-			power = 0
-		}
-
-		if power > 9 {
-			power = 9
-		}
-
-		gain := float32(float32(t.state.Desired)-t.state.OutsideTemp) / 30.0
-
-		if gain < 0.0 {
-			gain = 0.0
-		}
-
-		if gain > 1.0 {
-			gain = 1.0
-		}
-
-		t.state.Power = int(math.Ceil(float64(float32(power) * gain)))
-
 	}
+}
+
+func applyPower(t *Thermostat) {
+	power := int((float32(t.state.SetPoint) - t.state.Current) * 10)
+
+	if power < 0 {
+		power = 0
+	}
+
+	if power > 9 {
+		power = 9
+	}
+
+	gain := float32(float32(t.state.SetPoint)-t.state.Outside.Temp) / 30.0
+
+	if gain < 0.0 {
+		gain = 0.0
+	}
+
+	if gain > 1.0 {
+		gain = 1.0
+	}
+
+	t.state.Power = int(math.Ceil(float64(float32(power) * gain)))
 
 	pwm(t, 0)
 	pwm(t, 1)
@@ -123,26 +188,32 @@ func (t *Thermostat) update() {
 }
 
 func getAutomaticTemp(state State) int {
-	location, _ := time.LoadLocation("Local")
-
-	var hotTime time.Time
-	var coolTime time.Time
-	if state.Time.Weekday() >= 1 && state.Time.Weekday() <= 5 {
-		hotTime = time.Date(0, 0, 0, 16, 0, 0, 0, location)
-		coolTime = time.Date(0, 0, 0, 21, 0, 0, 0, location)
-	} else {
-		hotTime = time.Date(0, 0, 0, 8, 0, 0, 0, location)
-		coolTime = time.Date(0, 0, 0, 23, 0, 0, 0, location)
+	switch state.Time.Weekday() {
+	case 0:
+		return getTempForRange(state.Time.Hour(), state.Settings.SundayStartHour, state.Settings.SundayStopHour, state.Settings.PresentTemp, state.Settings.AbsentTemp)
+	case 1:
+		return getTempForRange(state.Time.Hour(), state.Settings.MondayStartHour, state.Settings.MondayStopHour, state.Settings.PresentTemp, state.Settings.AbsentTemp)
+	case 2:
+		return getTempForRange(state.Time.Hour(), state.Settings.TuesdayStartHour, state.Settings.TuesdayStopHour, state.Settings.PresentTemp, state.Settings.AbsentTemp)
+	case 3:
+		return getTempForRange(state.Time.Hour(), state.Settings.WednesdayStartHour, state.Settings.WednesdayStopHour, state.Settings.PresentTemp, state.Settings.AbsentTemp)
+	case 4:
+		return getTempForRange(state.Time.Hour(), state.Settings.ThursdayStartHour, state.Settings.ThursdayStopHour, state.Settings.PresentTemp, state.Settings.AbsentTemp)
+	case 5:
+		return getTempForRange(state.Time.Hour(), state.Settings.FridayStartHour, state.Settings.FridayStopHour, state.Settings.PresentTemp, state.Settings.AbsentTemp)
+	case 6:
+		return getTempForRange(state.Time.Hour(), state.Settings.SaturdayStartHour, state.Settings.SaturdayStopHour, state.Settings.PresentTemp, state.Settings.AbsentTemp)
 	}
 
-	if (state.Time.Hour() > hotTime.Hour() ||
-		(state.Time.Hour() == hotTime.Hour() && state.Time.Minute() >= hotTime.Minute())) &&
-		(state.Time.Hour() < coolTime.Hour() ||
-			(state.Time.Hour() == coolTime.Hour() && state.Time.Minute() < coolTime.Minute())) {
-		return 21
+	return -1
+}
+
+func getTempForRange(hour int, startHour int, stopHour int, presentTemp int, absentTemp int) int {
+	if hour >= startHour && hour < stopHour {
+		return presentTemp
 	}
 
-	return 5
+	return absentTemp
 }
 
 func pwm(t *Thermostat, output int) {
@@ -163,7 +234,60 @@ func pwm(t *Thermostat, output int) {
 
 // LoadWeatherState receives a weather state and loads it into the thermostat state
 func (t *Thermostat) LoadWeatherState(weather weather.State) {
-	t.state.OutsideTemp = weather.TempC
-	t.state.Humidity = weather.Humidity
-	t.state.Wind = weather.WindKph
+	t.state.Outside.Temp = weather.TempC
+	t.state.Outside.Humidity = weather.Humidity
+	t.state.Outside.Wind = weather.WindKph
+}
+
+func loadSettings() Settings {
+	val, err := ioutil.ReadFile("settings.json")
+	if err != nil {
+		defaultSettings := defaultSettings()
+		saveSettings(defaultSettings)
+		return defaultSettings
+	}
+
+	settings := Settings{}
+	err = json.Unmarshal(val, &settings)
+	if err != nil {
+		defaultSettings := defaultSettings()
+		saveSettings(defaultSettings)
+		return defaultSettings
+	}
+
+	return settings
+}
+
+func defaultSettings() Settings {
+	return Settings{
+		ManualTemp:         21,
+		PresentTemp:        21,
+		AbsentTemp:         10,
+		MondayStartHour:    0,
+		MondayStopHour:     0,
+		TuesdayStartHour:   0,
+		TuesdayStopHour:    0,
+		WednesdayStartHour: 0,
+		WednesdayStopHour:  0,
+		ThursdayStartHour:  0,
+		ThursdayStopHour:   0,
+		FridayStartHour:    16,
+		FridayStopHour:     23,
+		SaturdayStartHour:  7,
+		SaturdayStopHour:   23,
+		SundayStartHour:    7,
+		SundayStopHour:     23,
+	}
+}
+
+func saveSettings(settings Settings) {
+	json, err := json.Marshal(settings)
+	if err != nil {
+		panic(err)
+	}
+
+	err = ioutil.WriteFile("settings.json", json, 0644)
+	if err != nil {
+		panic(err)
+	}
 }
