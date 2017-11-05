@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/philippebeaulieu/rpi-thermostat/sensor"
 )
@@ -44,7 +45,7 @@ func (d *ds18b20) GetTemperature() (float32, error) {
 		return -1, err
 	}
 
-	temp, err := strconv.Atoi(s[len(s)-5:])
+	temp, err := strconv.Atoi(s[strings.Index(s, "=")+1:])
 
 	return float32(temp) / 1000, err
 }

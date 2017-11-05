@@ -25,8 +25,6 @@ func main() {
 		debug = true
 	}
 
-	fmt.Printf("debug: %v\n", debug)
-
 	var err error
 
 	var controller controller.Controller
