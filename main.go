@@ -57,7 +57,7 @@ func main() {
 	weather := apixu.NewApixuWeather(thermostat, "61a17a8fdb264c2eaba152957173006", "J7J0B7")
 	go weather.Run()
 
-	database, err := database.NewDatabase(thermostat, "192.168.2.41:3306", "thermostat", "GDeWFE8Hg3aKh44")
+	database, err := database.NewDatabase(thermostat, "10.20.0.1:3306", "thermostat", "GDeWFE8Hg3aKh44")
 	if err != nil {
 		fmt.Printf("failed to create database: %v\n", err)
 		return
