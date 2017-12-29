@@ -162,6 +162,7 @@ func (t *Thermostat) update() {
 
 func applyPower(t *Thermostat) {
 
+	t.pid.SetPID(float64((t.state.SetPoint-int(t.state.Outside.Temp))/5.0), 0.002, 0.0)
 	t.pid.SetOutputLimits(0, 9)
 	t.pid.Set(float64(t.state.SetPoint))
 	t.state.Power = int(t.pid.UpdateDuration(float64(t.state.Current), 10*time.Second))
