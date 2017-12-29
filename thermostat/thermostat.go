@@ -65,7 +65,7 @@ func NewThermostat(sensor sensor.Sensor, controller controller.Controller) *Ther
 	return &Thermostat{
 		sensor:     sensor,
 		controller: controller,
-		pid:        *pidctrl.NewPIDController(2, 0.01, 0.0),
+		pid:        *pidctrl.NewPIDController(5, 0.001, 0.0),
 		state: State{
 			Sysmode:  "off",
 			Outside:  Outside{},
