@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"time"
 
+	"github.com/felixge/pidctrl"
 	"github.com/philippebeaulieu/rpi-thermostat/controller"
 	"github.com/philippebeaulieu/rpi-thermostat/sensor"
 	"github.com/philippebeaulieu/rpi-thermostat/weather"
@@ -16,6 +16,7 @@ import (
 type Thermostat struct {
 	sensor     sensor.Sensor
 	controller controller.Controller
+	pid        pidctrl.PIDController
 	pwmTotals  [3]int
 	state      State
 }
@@ -64,6 +65,7 @@ func NewThermostat(sensor sensor.Sensor, controller controller.Controller) *Ther
 	return &Thermostat{
 		sensor:     sensor,
 		controller: controller,
+		pid:        *pidctrl.NewPIDController(2, 0.01, 0.0),
 		state: State{
 			Sysmode:  "off",
 			Outside:  Outside{},
@@ -82,11 +84,10 @@ func (t *Thermostat) Run() {
 			fmt.Println(err)
 			fmt.Printf("switching system off due to sensor failure")
 			t.state.Sysmode = "off"
-			t.update()
 		} else {
 			t.state.Current = current
-			t.update()
 		}
+		t.update()
 		<-time.After(10 * time.Second)
 	}
 }
@@ -161,27 +162,9 @@ func (t *Thermostat) update() {
 
 func applyPower(t *Thermostat) {
 
-	var MinPower = 0
-	var MaxPower = 9
-
-	var setPoint = float64(t.state.SetPoint)
-	var current = float64(t.state.Current)
-	var outside = float64(t.state.Outside.Temp)
-
-	var power = 0
-	if setPoint > outside {
-		power = int(math.Ceil((setPoint - current) * ((setPoint - outside) / 10.0)))
-	}
-
-	if power < MinPower {
-		power = MinPower
-	}
-
-	if power > MaxPower {
-		power = MaxPower
-	}
-
-	t.state.Power = power
+	t.pid.SetOutputLimits(0, 9)
+	t.pid.Set(float64(t.state.SetPoint))
+	t.state.Power = int(t.pid.UpdateDuration(float64(t.state.Current), 10*time.Second))
 
 	pwm(t, 0)
 	pwm(t, 1)
