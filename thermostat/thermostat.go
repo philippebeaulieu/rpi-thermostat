@@ -94,10 +94,10 @@ func (t *Thermostat) Run() {
 
 // Put receives a state an transfer its values to the thermostat
 func (t *Thermostat) Put(state State) {
-	t.state.Settings.ManualTemp = minMax(state.Settings.ManualTemp, 6, 30)
+	t.state.Settings.ManualTemp = minMax(state.Settings.ManualTemp, 5, 30)
 
-	t.state.Settings.PresentTemp = minMax(state.Settings.PresentTemp, 6, 30)
-	t.state.Settings.AbsentTemp = minMax(state.Settings.AbsentTemp, 6, 30)
+	t.state.Settings.PresentTemp = minMax(state.Settings.PresentTemp, 5, 30)
+	t.state.Settings.AbsentTemp = minMax(state.Settings.AbsentTemp, 5, 30)
 
 	t.state.Settings.MondayStartHour = minMax(state.Settings.MondayStartHour, 0, 23)
 	t.state.Settings.MondayStopHour = minMax(state.Settings.MondayStopHour, 0, 23)
